@@ -1,0 +1,9 @@
+{
+  "name": "one-tap",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A Valorant-style 3D 1v1 shooter vs a bot that runs in the browser",
+  "scripts": {
+    "build": "node tools/build-standalone.mjs"
+  }
+}
