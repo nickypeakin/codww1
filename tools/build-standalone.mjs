@@ -1,5 +1,5 @@
 // Bundles index.html and everything in js/ into one self-contained file,
-// dist/one-tap.html, that works offline: download it and double-click.
+// dist/game.html, that works offline: download it and double-click.
 //
 //   node tools/build-standalone.mjs
 
@@ -16,5 +16,5 @@ html = html.replace(/<script src="([^"]+)"><\/script>/g, (_, src) => {
 });
 
 mkdirSync(join(root, 'dist'), { recursive: true });
-writeFileSync(join(root, 'dist', 'one-tap.html'), html);
-console.log(`wrote dist/one-tap.html (${Math.round(html.length / 1024)} KB)`);
+writeFileSync(join(root, 'dist', 'game.html'), html);
+console.log(`wrote dist/game.html (${Math.round(html.length / 1024)} KB)`);
