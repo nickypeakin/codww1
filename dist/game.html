@@ -100,6 +100,31 @@ kbd{font-family:var(--label);font-size:13px;border:1px solid var(--rule);border-
 #touch button.on{border-color:var(--spectre);color:var(--spectre)}
 body.touch .hud{padding-bottom:calc(136px + env(safe-area-inset-bottom,0px))}
 body.touch #br{display:none}
+.field{display:grid;gap:6px;max-width:320px}
+.text{font-family:var(--body);font-size:18px;color:var(--bone);background:rgba(228,219,196,.06);border:1px solid var(--rule);border-radius:3px;padding:9px 12px;width:100%;box-sizing:border-box;-webkit-user-select:text;user-select:text}
+.text:focus{outline:2px solid var(--spectre);outline-offset:1px}
+.text.code{font-family:var(--display);font-size:26px;line-height:1;letter-spacing:.2em;text-transform:uppercase;width:8.5ch;padding:8px 10px 6px}
+.joinrow{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.joinrow .field{max-width:none}
+.codebig{font-family:var(--display);color:var(--spectre);letter-spacing:.08em;white-space:nowrap}
+.invite{display:flex;gap:10px;flex-wrap:wrap}
+.invite .text{flex:1 1 240px;min-width:0;font-size:15px}
+.crewlist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.crewlist li{display:flex;align-items:center;gap:10px;font-size:19px;min-width:0}
+.crewlist .tag{font-family:var(--label);font-size:13px;letter-spacing:.06em;color:var(--ash)}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.6)}
+.check{display:flex;gap:10px;align-items:center;font-size:16px;cursor:pointer;width:max-content;max-width:100%}
+.check input{width:18px;height:18px;accent-color:var(--spectre);margin:0}
+.check input:disabled+span{color:var(--ash)}
+.crewbox{display:grid;gap:10px}
+.hud.ferrying #bl,.hud.ferrying #br{visibility:hidden}
+#crew{list-style:none;margin:6px 0 0;padding:6px 0 0;border-top:1px solid var(--rule);display:grid;gap:3px;font-size:14px;max-width:210px}
+#crew li{display:flex;align-items:center;gap:7px;min-width:0}
+#crew li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#crew li em{color:var(--ash);font-size:13px;white-space:nowrap}
+#ferry{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;padding:14px 24px;max-width:calc(100vw - 32px)}
+#ferry .ft{font-family:var(--display);font-size:clamp(30px,5vw,46px);line-height:1;margin:0;color:var(--bone);text-shadow:0 0 20px rgba(122,255,200,.35)}
+#ferry p{margin:8px 0 0}
 @media (max-width:560px){
   .hud{grid-template-columns:1fr auto;grid-template-rows:auto auto 1fr auto;gap:8px}
   #tl{grid-column:1;grid-row:1}
@@ -126,6 +151,7 @@ body.touch #br{display:none}
     <div class="skulls" id="skulls"></div>
     <span class="lbl">Gold</span>
     <span class="gold" id="gold">0</span>
+    <ul id="crew" hidden></ul>
   </div>
   <div id="compassWrap"><canvas id="compass" aria-label="Compass"></canvas><div id="dist"></div></div>
   <div id="tr"><button class="tiny" id="muteBtn" type="button">Mute</button><button class="tiny" id="pauseBtn" type="button">Pause</button></div>
@@ -142,6 +168,7 @@ body.touch #br{display:none}
 
 <div id="banner"><p id="bTitle"></p><p id="bSub"></p></div>
 <div id="toast"></div>
+<div id="ferry" class="panel" hidden><p class="ft">The Ferry of the Damned</p><p id="ferryText">Back at sea in 10</p></div>
 <div id="prompt" class="panel" hidden><span id="pText"></span><div class="bar" id="pBarWrap"><i id="pBar"></i></div></div>
 
 <div id="touch" hidden>
@@ -171,14 +198,42 @@ body.touch #br{display:none}
       <dt>Hold <kbd>R</kbd></dt><dd>Patch holes in the hull, then bail out the water</dd>
       <dt>Hold <kbd>F</kbd></dt><dd>Haul a cursed skull aboard when you sail close to its green light</dd>
       <dt>Drag</dt><dd>Look around. Scroll to zoom. <kbd>M</kbd> mutes, <kbd>P</kbd> pauses.</dd>
+      <dt>Crew</dt><dd>Up to 4 pirates, each with their own ship. One hosts, the others join with a code.</dd>
     </dl>
+    <div class="field">
+      <label class="lbl" for="nameIn">Your pirate name</label>
+      <input id="nameIn" class="text" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Captain Bones">
+    </div>
     <div class="actions">
-      <button class="primary" id="startBtn" type="button">Set sail</button>
+      <button class="primary" id="startBtn" type="button">Sail solo</button>
+      <button class="ghostbtn" id="hostBtn" type="button">Host a crew</button>
+      <button class="ghostbtn" id="joinOpenBtn" type="button">Join a crew</button>
       <button class="ghostbtn" id="fsBtn" type="button">Full screen</button>
     </div>
+    <form class="joinrow" id="joinForm" hidden>
+      <div class="field">
+        <label class="lbl" for="codeIn">Crew code</label>
+        <input id="codeIn" class="text code" maxlength="5" autocomplete="off" spellcheck="false" placeholder="ABCDE">
+      </div>
+      <button class="ghostbtn" type="submit">Join</button>
+    </form>
+    <p class="note" id="netNote" hidden></p>
     <p class="note" id="bestNote">Play with headphones for the full fright.</p>
     <p class="note">Fan-made game. Not made by or connected to Rare or Microsoft.</p>
     <p class="note err" id="err" hidden></p>
+  </div>
+</section>
+
+<section class="card-wrap" id="lobby" hidden>
+  <div class="card">
+    <p class="eyebrow">Gathering a crew</p>
+    <h1>Crew <span class="codebig" id="lobbyCode">&middot;&middot;&middot;&middot;&middot;</span></h1>
+    <p class="lede" id="lobbyLede"></p>
+    <div class="invite" id="inviteRow" hidden><input id="inviteIn" class="text" readonly aria-label="Invite link"><button class="ghostbtn" id="copyBtn" type="button">Copy link</button></div>
+    <ul class="crewlist" id="crewList"></ul>
+    <label class="check"><input type="checkbox" id="pvpIn"><span>Ships can sink each other</span></label>
+    <div class="actions"><button class="primary" id="launchBtn" type="button">Set sail</button><button class="ghostbtn" id="leaveBtn" type="button">Leave</button></div>
+    <p class="note" id="lobbyStatus"></p>
   </div>
 </section>
 
@@ -192,7 +247,7 @@ body.touch #br{display:none}
       <div><span class="lbl">Gold</span><b id="stGold">0</b></div>
       <div><span class="lbl">Time at sea</span><b id="stTime">0:00</b></div>
     </div>
-    <div class="actions"><button class="primary" id="againBtn" type="button">Sail again</button></div>
+    <div class="actions"><button class="primary" id="againBtn" type="button">Sail again</button><button class="ghostbtn" id="endLeave" type="button" hidden>Leave the crew</button></div>
     <p class="note" id="endBest"></p>
   </div>
 </section>
@@ -200,9 +255,13 @@ body.touch #br{display:none}
 <section class="card-wrap" id="paused" hidden>
   <div class="card">
     <p class="eyebrow">Anchored</p>
-    <h1>Paused</h1>
-    <p class="lede">The fog waits for you.</p>
-    <div class="actions"><button class="primary" id="resumeBtn" type="button">Resume</button></div>
+    <h1 id="pauseTitle">Paused</h1>
+    <p class="lede" id="pauseLede">The fog waits for you.</p>
+    <div class="crewbox" id="pauseCrew" hidden>
+      <p class="note">Crew code <span class="codebig" id="pauseCode"></span>. Friends can still join.</p>
+      <div class="invite" id="pauseInvite" hidden><input id="pauseLink" class="text" readonly aria-label="Invite link"><button class="ghostbtn" id="pauseCopy" type="button">Copy link</button></div>
+    </div>
+    <div class="actions"><button class="primary" id="resumeBtn" type="button">Resume</button><button class="ghostbtn" id="pauseLeave" type="button" hidden>Leave the crew</button></div>
   </div>
 </section>
 
@@ -216,18 +275,317 @@ body.touch #br{display:none}
 
 </script>
 <script>
+(()=>{function e(e,t,n,r){Object.defineProperty(e,t,{get:n,set:r,enumerable:!0,configurable:!0})}function t(e){return e&&e.__esModule?e.default:e}class n{constructor(){this.chunkedMTU=16300,this._dataCount=1,this.chunk=e=>{let t=[],n=e.byteLength,r=Math.ceil(n/this.chunkedMTU),i=0,s=0;for(;s<n;){let o=Math.min(n,s+this.chunkedMTU),a=e.slice(s,o),c={__peerData:this._dataCount,n:i,data:a,total:r};t.push(c),s=o,i++}return this._dataCount++,t}}}class r{append_buffer(e){this.flush(),this._parts.push(e)}append(e){this._pieces.push(e)}flush(){if(this._pieces.length>0){let e=new Uint8Array(this._pieces);this._parts.push(e),this._pieces=[]}}toArrayBuffer(){let e=[];for(let t of this._parts)e.push(t);return function(e){let t=0;for(let n of e)t+=n.byteLength;let n=new Uint8Array(t),r=0;for(let t of e){let e=new Uint8Array(t.buffer,t.byteOffset,t.byteLength);n.set(e,r),r+=t.byteLength}return n}(e).buffer}constructor(){this.encoder=new TextEncoder,this._pieces=[],this._parts=[]}}function i(e){return new o(e).unpack()}function s(e){let t=new a,n=t.pack(e);return n instanceof Promise?n.then(()=>t.getBuffer()):t.getBuffer()}class o{unpack(){let e,t=this.unpack_uint8();if(t<128)return t;if((224^t)<32)return(224^t)-32;if((e=160^t)<=15)return this.unpack_raw(e);if((e=176^t)<=15)return this.unpack_string(e);if((e=144^t)<=15)return this.unpack_array(e);if((e=128^t)<=15)return this.unpack_map(e);switch(t){case 192:return null;case 193:case 212:case 213:case 214:case 215:return;case 194:return!1;case 195:return!0;case 202:return this.unpack_float();case 203:return this.unpack_double();case 204:return this.unpack_uint8();case 205:return this.unpack_uint16();case 206:return this.unpack_uint32();case 207:return this.unpack_uint64();case 208:return this.unpack_int8();case 209:return this.unpack_int16();case 210:return this.unpack_int32();case 211:return this.unpack_int64();case 216:return e=this.unpack_uint16(),this.unpack_string(e);case 217:return e=this.unpack_uint32(),this.unpack_string(e);case 218:return e=this.unpack_uint16(),this.unpack_raw(e);case 219:return e=this.unpack_uint32(),this.unpack_raw(e);case 220:return e=this.unpack_uint16(),this.unpack_array(e);case 221:return e=this.unpack_uint32(),this.unpack_array(e);case 222:return e=this.unpack_uint16(),this.unpack_map(e);case 223:return e=this.unpack_uint32(),this.unpack_map(e)}}unpack_uint8(){let e=255&this.dataView[this.index];return this.index++,e}unpack_uint16(){let e=this.read(2),t=(255&e[0])*256+(255&e[1]);return this.index+=2,t}unpack_uint32(){let e=this.read(4),t=((256*e[0]+e[1])*256+e[2])*256+e[3];return this.index+=4,t}unpack_uint64(){let e=this.read(8),t=((((((256*e[0]+e[1])*256+e[2])*256+e[3])*256+e[4])*256+e[5])*256+e[6])*256+e[7];return this.index+=8,t}unpack_int8(){let e=this.unpack_uint8();return e<128?e:e-256}unpack_int16(){let e=this.unpack_uint16();return e<32768?e:e-65536}unpack_int32(){let e=this.unpack_uint32();return e<0x80000000?e:e-0x100000000}unpack_int64(){let e=this.unpack_uint64();return e<0x8000000000000000?e:e-0xffffffffffffffff}unpack_raw(e){if(this.length<this.index+e)throw Error(`BinaryPackFailure: index is out of range ${this.index} ${e} ${this.length}`);let t=this.dataBuffer.slice(this.index,this.index+e);return this.index+=e,t}unpack_string(e){let t,n,r=this.read(e),i=0,s="";for(;i<e;)(t=r[i])<160?(n=t,i++):(192^t)<32?(n=(31&t)<<6|63&r[i+1],i+=2):(224^t)<16?(n=(15&t)<<12|(63&r[i+1])<<6|63&r[i+2],i+=3):(n=(7&t)<<18|(63&r[i+1])<<12|(63&r[i+2])<<6|63&r[i+3],i+=4),s+=String.fromCodePoint(n);return this.index+=e,s}unpack_array(e){let t=Array(e);for(let n=0;n<e;n++)t[n]=this.unpack();return t}unpack_map(e){let t={};for(let n=0;n<e;n++)t[this.unpack()]=this.unpack();return t}unpack_float(){let e=this.unpack_uint32();return(0==e>>31?1:-1)*(8388607&e|8388608)*2**((e>>23&255)-127-23)}unpack_double(){let e=this.unpack_uint32(),t=this.unpack_uint32(),n=(e>>20&2047)-1023;return(0==e>>31?1:-1)*((1048575&e|1048576)*2**(n-20)+t*2**(n-52))}read(e){let t=this.index;if(t+e<=this.length)return this.dataView.subarray(t,t+e);throw Error("BinaryPackFailure: read index out of range")}constructor(e){this.index=0,this.dataBuffer=e,this.dataView=new Uint8Array(this.dataBuffer),this.length=this.dataBuffer.byteLength}}class a{getBuffer(){return this._bufferBuilder.toArrayBuffer()}pack(e){if("string"==typeof e)this.pack_string(e);else if("number"==typeof e)Math.floor(e)===e?this.pack_integer(e):this.pack_double(e);else if("boolean"==typeof e)!0===e?this._bufferBuilder.append(195):!1===e&&this._bufferBuilder.append(194);else if(void 0===e)this._bufferBuilder.append(192);else if("object"==typeof e)if(null===e)this._bufferBuilder.append(192);else{let t=e.constructor;if(e instanceof Array){let t=this.pack_array(e);if(t instanceof Promise)return t.then(()=>this._bufferBuilder.flush())}else if(e instanceof ArrayBuffer)this.pack_bin(new Uint8Array(e));else if("BYTES_PER_ELEMENT"in e)this.pack_bin(new Uint8Array(e.buffer,e.byteOffset,e.byteLength));else if(e instanceof Date)this.pack_string(e.toString());else if(e instanceof Blob)return e.arrayBuffer().then(e=>{this.pack_bin(new Uint8Array(e)),this._bufferBuilder.flush()});else if(t==Object||t.toString().startsWith("class")){let t=this.pack_object(e);if(t instanceof Promise)return t.then(()=>this._bufferBuilder.flush())}else throw Error(`Type "${t.toString()}" not yet supported`)}else throw Error(`Type "${typeof e}" not yet supported`);this._bufferBuilder.flush()}pack_bin(e){let t=e.length;if(t<=15)this.pack_uint8(160+t);else if(t<=65535)this._bufferBuilder.append(218),this.pack_uint16(t);else if(t<=0xffffffff)this._bufferBuilder.append(219),this.pack_uint32(t);else throw Error("Invalid length");this._bufferBuilder.append_buffer(e)}pack_string(e){let t=this._textEncoder.encode(e),n=t.length;if(n<=15)this.pack_uint8(176+n);else if(n<=65535)this._bufferBuilder.append(216),this.pack_uint16(n);else if(n<=0xffffffff)this._bufferBuilder.append(217),this.pack_uint32(n);else throw Error("Invalid length");this._bufferBuilder.append_buffer(t)}pack_array(e){let t=e.length;if(t<=15)this.pack_uint8(144+t);else if(t<=65535)this._bufferBuilder.append(220),this.pack_uint16(t);else if(t<=0xffffffff)this._bufferBuilder.append(221),this.pack_uint32(t);else throw Error("Invalid length");let n=r=>{if(r<t){let t=this.pack(e[r]);return t instanceof Promise?t.then(()=>n(r+1)):n(r+1)}};return n(0)}pack_integer(e){if(e>=-32&&e<=127)this._bufferBuilder.append(255&e);else if(e>=0&&e<=255)this._bufferBuilder.append(204),this.pack_uint8(e);else if(e>=-128&&e<=127)this._bufferBuilder.append(208),this.pack_int8(e);else if(e>=0&&e<=65535)this._bufferBuilder.append(205),this.pack_uint16(e);else if(e>=-32768&&e<=32767)this._bufferBuilder.append(209),this.pack_int16(e);else if(e>=0&&e<=0xffffffff)this._bufferBuilder.append(206),this.pack_uint32(e);else if(e>=-0x80000000&&e<=0x7fffffff)this._bufferBuilder.append(210),this.pack_int32(e);else if(e>=-0x8000000000000000&&e<=0x8000000000000000)this._bufferBuilder.append(211),this.pack_int64(e);else if(e>=0&&e<=0xffffffffffffffff)this._bufferBuilder.append(207),this.pack_uint64(e);else throw Error("Invalid integer")}pack_double(e){let t=0;e<0&&(t=1,e=-e);let n=Math.floor(Math.log(e)/Math.LN2),r=Math.floor((e/2**n-1)*0x10000000000000),i=t<<31|n+1023<<20|r/0x100000000&1048575;this._bufferBuilder.append(203),this.pack_int32(i),this.pack_int32(r%0x100000000)}pack_object(e){let t=Object.keys(e),n=t.length;if(n<=15)this.pack_uint8(128+n);else if(n<=65535)this._bufferBuilder.append(222),this.pack_uint16(n);else if(n<=0xffffffff)this._bufferBuilder.append(223),this.pack_uint32(n);else throw Error("Invalid length");let r=n=>{if(n<t.length){let i=t[n];if(e.hasOwnProperty(i)){this.pack(i);let t=this.pack(e[i]);if(t instanceof Promise)return t.then(()=>r(n+1))}return r(n+1)}};return r(0)}pack_uint8(e){this._bufferBuilder.append(e)}pack_uint16(e){this._bufferBuilder.append(e>>8),this._bufferBuilder.append(255&e)}pack_uint32(e){let t=0|e;this._bufferBuilder.append((0xff000000&t)>>>24),this._bufferBuilder.append((0xff0000&t)>>>16),this._bufferBuilder.append((65280&t)>>>8),this._bufferBuilder.append(255&t)}pack_uint64(e){let t=e/0x100000000,n=e%0x100000000;this._bufferBuilder.append((0xff000000&t)>>>24),this._bufferBuilder.append((0xff0000&t)>>>16),this._bufferBuilder.append((65280&t)>>>8),this._bufferBuilder.append(255&t),this._bufferBuilder.append((0xff000000&n)>>>24),this._bufferBuilder.append((0xff0000&n)>>>16),this._bufferBuilder.append((65280&n)>>>8),this._bufferBuilder.append(255&n)}pack_int8(e){this._bufferBuilder.append(255&e)}pack_int16(e){this._bufferBuilder.append((65280&e)>>8),this._bufferBuilder.append(255&e)}pack_int32(e){this._bufferBuilder.append(e>>>24&255),this._bufferBuilder.append((0xff0000&e)>>>16),this._bufferBuilder.append((65280&e)>>>8),this._bufferBuilder.append(255&e)}pack_int64(e){let t=Math.floor(e/0x100000000),n=e%0x100000000;this._bufferBuilder.append((0xff000000&t)>>>24),this._bufferBuilder.append((0xff0000&t)>>>16),this._bufferBuilder.append((65280&t)>>>8),this._bufferBuilder.append(255&t),this._bufferBuilder.append((0xff000000&n)>>>24),this._bufferBuilder.append((0xff0000&n)>>>16),this._bufferBuilder.append((65280&n)>>>8),this._bufferBuilder.append(255&n)}constructor(){this._bufferBuilder=new r,this._textEncoder=new TextEncoder}}"use strict";let c=!0,p=!0;function d(e,t,n){let r=e.match(t);return r&&r.length>=n&&parseInt(r[n],10)}function l(e,t,n){if(!e.RTCPeerConnection)return;let r=e.RTCPeerConnection.prototype,i=r.addEventListener;r.addEventListener=function(e,r){if(e!==t)return i.apply(this,arguments);let s=e=>{let t=n(e);t&&(r.handleEvent?r.handleEvent(t):r(t))};return this._eventMap=this._eventMap||{},this._eventMap[t]||(this._eventMap[t]=new Map),this._eventMap[t].set(r,s),i.apply(this,[e,s])};let s=r.removeEventListener;r.removeEventListener=function(e,n){if(e!==t||!this._eventMap||!this._eventMap[t]||!this._eventMap[t].has(n))return s.apply(this,arguments);let r=this._eventMap[t].get(n);return this._eventMap[t].delete(n),0===this._eventMap[t].size&&delete this._eventMap[t],0===Object.keys(this._eventMap).length&&delete this._eventMap,s.apply(this,[e,r])},Object.defineProperty(r,"on"+t,{get(){return this["_on"+t]},set(e){this["_on"+t]&&(this.removeEventListener(t,this["_on"+t]),delete this["_on"+t]),e&&this.addEventListener(t,this["_on"+t]=e)},enumerable:!0,configurable:!0})}function h(e){return"boolean"!=typeof e?Error("Argument type: "+typeof e+". Please use a boolean."):(c=e,e?"adapter.js logging disabled":"adapter.js logging enabled")}function u(e){return"boolean"!=typeof e?Error("Argument type: "+typeof e+". Please use a boolean."):(p=!e,"adapter.js deprecation warnings "+(e?"disabled":"enabled"))}function f(){"object"==typeof window&&(c||"undefined"!=typeof console&&"function"==typeof console.log&&console.log.apply(console,arguments))}function m(e,t){p&&console.warn(e+" is deprecated, please use "+t+" instead.")}function _(e){return"[object Object]"===Object.prototype.toString.call(e)}function g(e,t,n){let r=n?"outbound-rtp":"inbound-rtp",i=new Map;if(null===t)return i;let s=[];return e.forEach(e=>{"track"===e.type&&e.trackIdentifier===t.id&&s.push(e)}),s.forEach(t=>{e.forEach(n=>{n.type===r&&n.trackId===t.id&&function e(t,n,r){!n||r.has(n.id)||(r.set(n.id,n),Object.keys(n).forEach(i=>{i.endsWith("Id")?e(t,t.get(n[i]),r):i.endsWith("Ids")&&n[i].forEach(n=>{e(t,t.get(n),r)})}))}(e,n,i)})}),i}"use strict";var y={};function C(e,t){let n=e&&e.navigator;if(!n.mediaDevices)return;let r=function(e){if("object"!=typeof e||e.mandatory||e.optional)return e;let t={};return Object.keys(e).forEach(n=>{if("require"===n||"advanced"===n||"mediaSource"===n)return;let r="object"==typeof e[n]?e[n]:{ideal:e[n]};void 0!==r.exact&&"number"==typeof r.exact&&(r.min=r.max=r.exact);let i=function(e,t){return e?e+t.charAt(0).toUpperCase()+t.slice(1):"deviceId"===t?"sourceId":t};if(void 0!==r.ideal){t.optional=t.optional||[];let e={};"number"==typeof r.ideal?(e[i("min",n)]=r.ideal,t.optional.push(e),(e={})[i("max",n)]=r.ideal):e[i("",n)]=r.ideal,t.optional.push(e)}void 0!==r.exact&&"number"!=typeof r.exact?(t.mandatory=t.mandatory||{},t.mandatory[i("",n)]=r.exact):["min","max"].forEach(e=>{void 0!==r[e]&&(t.mandatory=t.mandatory||{},t.mandatory[i(e,n)]=r[e])})}),e.advanced&&(t.optional=(t.optional||[]).concat(e.advanced)),t},i=function(e,i){if(t.version>=61)return i(e);if((e=JSON.parse(JSON.stringify(e)))&&"object"==typeof e.audio){let t=function(e,t,n){t in e&&!(n in e)&&(e[n]=e[t],delete e[t])};t((e=JSON.parse(JSON.stringify(e))).audio,"autoGainControl","googAutoGainControl"),t(e.audio,"noiseSuppression","googNoiseSuppression"),e.audio=r(e.audio)}if(e&&"object"==typeof e.video){let s=e.video.facingMode;s=s&&("object"==typeof s?s:{ideal:s});let o=t.version<66;if(s&&("user"===s.exact||"environment"===s.exact||"user"===s.ideal||"environment"===s.ideal)&&!(n.mediaDevices.getSupportedConstraints&&n.mediaDevices.getSupportedConstraints().facingMode&&!o)){let t;if(delete e.video.facingMode,"environment"===s.exact||"environment"===s.ideal?t=["back","rear"]:("user"===s.exact||"user"===s.ideal)&&(t=["front"]),t)return n.mediaDevices.enumerateDevices().then(n=>{let o=(n=n.filter(e=>"videoinput"===e.kind)).find(e=>t.some(t=>e.label.toLowerCase().includes(t)));return!o&&n.length&&t.includes("back")&&(o=n[n.length-1]),o&&(e.video.deviceId=s.exact?{exact:o.deviceId}:{ideal:o.deviceId}),e.video=r(e.video),f("chrome: "+JSON.stringify(e)),i(e)})}e.video=r(e.video)}return f("chrome: "+JSON.stringify(e)),i(e)},s=function(e){return t.version>=64?e:{name:({PermissionDeniedError:"NotAllowedError",PermissionDismissedError:"NotAllowedError",InvalidStateError:"NotAllowedError",DevicesNotFoundError:"NotFoundError",ConstraintNotSatisfiedError:"OverconstrainedError",TrackStartError:"NotReadableError",MediaDeviceFailedDueToShutdown:"NotAllowedError",MediaDeviceKillSwitchOn:"NotAllowedError",TabCaptureError:"AbortError",ScreenCaptureError:"AbortError",DeviceCaptureError:"AbortError"})[e.name]||e.name,message:e.message,constraint:e.constraint||e.constraintName,toString(){return this.name+(this.message&&": ")+this.message}}};if(n.getUserMedia=(function(e,t,r){i(e,e=>{n.webkitGetUserMedia(e,t,e=>{r&&r(s(e))})})}).bind(n),n.mediaDevices.getUserMedia){let e=n.mediaDevices.getUserMedia.bind(n.mediaDevices);n.mediaDevices.getUserMedia=function(t){return i(t,t=>e(t).then(e=>{if(t.audio&&!e.getAudioTracks().length||t.video&&!e.getVideoTracks().length)throw e.getTracks().forEach(e=>{e.stop()}),new DOMException("","NotFoundError");return e},e=>Promise.reject(s(e))))}}}"use strict";function v(e){e.MediaStream=e.MediaStream||e.webkitMediaStream}function b(e){if("object"!=typeof e||!e.RTCPeerConnection||"ontrack"in e.RTCPeerConnection.prototype)l(e,"track",e=>(e.transceiver||Object.defineProperty(e,"transceiver",{value:{receiver:e.receiver}}),e));else{Object.defineProperty(e.RTCPeerConnection.prototype,"ontrack",{get(){return this._ontrack},set(e){this._ontrack&&this.removeEventListener("track",this._ontrack),this.addEventListener("track",this._ontrack=e)},enumerable:!0,configurable:!0});let t=e.RTCPeerConnection.prototype.setRemoteDescription;e.RTCPeerConnection.prototype.setRemoteDescription=function(){return this._ontrackpoly||(this._ontrackpoly=t=>{t.stream.addEventListener("addtrack",n=>{let r;r=e.RTCPeerConnection.prototype.getReceivers?this.getReceivers().find(e=>e.track&&e.track.id===n.track.id):{track:n.track};let i=new Event("track");i.track=n.track,i.receiver=r,i.transceiver={receiver:r},i.streams=[t.stream],this.dispatchEvent(i)}),t.stream.getTracks().forEach(n=>{let r;r=e.RTCPeerConnection.prototype.getReceivers?this.getReceivers().find(e=>e.track&&e.track.id===n.id):{track:n};let i=new Event("track");i.track=n,i.receiver=r,i.transceiver={receiver:r},i.streams=[t.stream],this.dispatchEvent(i)})},this.addEventListener("addstream",this._ontrackpoly)),t.apply(this,arguments)}}}function T(e){if("object"==typeof e&&e.RTCPeerConnection&&!("getSenders"in e.RTCPeerConnection.prototype)&&"createDTMFSender"in e.RTCPeerConnection.prototype){let t=function(e,t){return{track:t,get dtmf(){return void 0===this._dtmf&&("audio"===t.kind?this._dtmf=e.createDTMFSender(t):this._dtmf=null),this._dtmf},_pc:e}};if(!e.RTCPeerConnection.prototype.getSenders){e.RTCPeerConnection.prototype.getSenders=function(){return this._senders=this._senders||[],this._senders.slice()};let n=e.RTCPeerConnection.prototype.addTrack;e.RTCPeerConnection.prototype.addTrack=function(e,r){let i=n.apply(this,arguments);return i||(i=t(this,e),this._senders.push(i)),i};let r=e.RTCPeerConnection.prototype.removeTrack;e.RTCPeerConnection.prototype.removeTrack=function(e){r.apply(this,arguments);let t=this._senders.indexOf(e);-1!==t&&this._senders.splice(t,1)}}let n=e.RTCPeerConnection.prototype.addStream;e.RTCPeerConnection.prototype.addStream=function(e){this._senders=this._senders||[],n.apply(this,[e]),e.getTracks().forEach(e=>{this._senders.push(t(this,e))})};let r=e.RTCPeerConnection.prototype.removeStream;e.RTCPeerConnection.prototype.removeStream=function(e){this._senders=this._senders||[],r.apply(this,[e]),e.getTracks().forEach(e=>{let t=this._senders.find(t=>t.track===e);t&&this._senders.splice(this._senders.indexOf(t),1)})}}else if("object"==typeof e&&e.RTCPeerConnection&&"getSenders"in e.RTCPeerConnection.prototype&&"createDTMFSender"in e.RTCPeerConnection.prototype&&e.RTCRtpSender&&!("dtmf"in e.RTCRtpSender.prototype)){let t=e.RTCPeerConnection.prototype.getSenders;e.RTCPeerConnection.prototype.getSenders=function(){let e=t.apply(this,[]);return e.forEach(e=>e._pc=this),e},Object.defineProperty(e.RTCRtpSender.prototype,"dtmf",{get(){return void 0===this._dtmf&&("audio"===this.track.kind?this._dtmf=this._pc.createDTMFSender(this.track):this._dtmf=null),this._dtmf}})}}function S(e){if(!("object"==typeof e&&e.RTCPeerConnection&&e.RTCRtpSender&&e.RTCRtpReceiver))return;if(!("getStats"in e.RTCRtpSender.prototype)){let t=e.RTCPeerConnection.prototype.getSenders;t&&(e.RTCPeerConnection.prototype.getSenders=function(){let e=t.apply(this,[]);return e.forEach(e=>e._pc=this),e});let n=e.RTCPeerConnection.prototype.addTrack;n&&(e.RTCPeerConnection.prototype.addTrack=function(){let e=n.apply(this,arguments);return e._pc=this,e}),e.RTCRtpSender.prototype.getStats=function(){let e=this;return this._pc.getStats().then(t=>g(t,e.track,!0))}}if(!("getStats"in e.RTCRtpReceiver.prototype)){let t=e.RTCPeerConnection.prototype.getReceivers;t&&(e.RTCPeerConnection.prototype.getReceivers=function(){let e=t.apply(this,[]);return e.forEach(e=>e._pc=this),e}),l(e,"track",e=>(e.receiver._pc=e.srcElement,e)),e.RTCRtpReceiver.prototype.getStats=function(){let e=this;return this._pc.getStats().then(t=>g(t,e.track,!1))}}if(!("getStats"in e.RTCRtpSender.prototype&&"getStats"in e.RTCRtpReceiver.prototype))return;let t=e.RTCPeerConnection.prototype.getStats;e.RTCPeerConnection.prototype.getStats=function(){if(arguments.length>0&&arguments[0]instanceof e.MediaStreamTrack){let e,t,n,r=arguments[0];return(this.getSenders().forEach(t=>{t.track===r&&(e?n=!0:e=t)}),this.getReceivers().forEach(e=>(e.track===r&&(t?n=!0:t=e),e.track===r)),n||e&&t)?Promise.reject(new DOMException("There are more than one sender or receiver for the track.","InvalidAccessError")):e?e.getStats():t?t.getStats():Promise.reject(new DOMException("There is no sender or receiver for the track.","InvalidAccessError"))}return t.apply(this,arguments)}}function k(e){e.RTCPeerConnection.prototype.getLocalStreams=function(){return this._shimmedLocalStreams=this._shimmedLocalStreams||{},Object.keys(this._shimmedLocalStreams).map(e=>this._shimmedLocalStreams[e][0])};let t=e.RTCPeerConnection.prototype.addTrack;e.RTCPeerConnection.prototype.addTrack=function(e,n){if(!n)return t.apply(this,arguments);this._shimmedLocalStreams=this._shimmedLocalStreams||{};let r=t.apply(this,arguments);return this._shimmedLocalStreams[n.id]?-1===this._shimmedLocalStreams[n.id].indexOf(r)&&this._shimmedLocalStreams[n.id].push(r):this._shimmedLocalStreams[n.id]=[n,r],r};let n=e.RTCPeerConnection.prototype.addStream;e.RTCPeerConnection.prototype.addStream=function(e){this._shimmedLocalStreams=this._shimmedLocalStreams||{},e.getTracks().forEach(e=>{if(this.getSenders().find(t=>t.track===e))throw new DOMException("Track already exists.","InvalidAccessError")});let t=this.getSenders();n.apply(this,arguments);let r=this.getSenders().filter(e=>-1===t.indexOf(e));this._shimmedLocalStreams[e.id]=[e].concat(r)};let r=e.RTCPeerConnection.prototype.removeStream;e.RTCPeerConnection.prototype.removeStream=function(e){return this._shimmedLocalStreams=this._shimmedLocalStreams||{},delete this._shimmedLocalStreams[e.id],r.apply(this,arguments)};let i=e.RTCPeerConnection.prototype.removeTrack;e.RTCPeerConnection.prototype.removeTrack=function(e){return this._shimmedLocalStreams=this._shimmedLocalStreams||{},e&&Object.keys(this._shimmedLocalStreams).forEach(t=>{let n=this._shimmedLocalStreams[t].indexOf(e);-1!==n&&this._shimmedLocalStreams[t].splice(n,1),1===this._shimmedLocalStreams[t].length&&delete this._shimmedLocalStreams[t]}),i.apply(this,arguments)}}function R(e,t){if(!e.RTCPeerConnection)return;if(e.RTCPeerConnection.prototype.addTrack&&t.version>=65)return k(e);let n=e.RTCPeerConnection.prototype.getLocalStreams;e.RTCPeerConnection.prototype.getLocalStreams=function(){let e=n.apply(this);return this._reverseStreams=this._reverseStreams||{},e.map(e=>this._reverseStreams[e.id])};let r=e.RTCPeerConnection.prototype.addStream;e.RTCPeerConnection.prototype.addStream=function(t){if(this._streams=this._streams||{},this._reverseStreams=this._reverseStreams||{},t.getTracks().forEach(e=>{if(this.getSenders().find(t=>t.track===e))throw new DOMException("Track already exists.","InvalidAccessError")}),!this._reverseStreams[t.id]){let n=new e.MediaStream(t.getTracks());this._streams[t.id]=n,this._reverseStreams[n.id]=t,t=n}r.apply(this,[t])};let i=e.RTCPeerConnection.prototype.removeStream;function s(e,t){let n=t.sdp;return Object.keys(e._reverseStreams||[]).forEach(t=>{let r=e._reverseStreams[t],i=e._streams[r.id];n=n.replace(RegExp(i.id,"g"),r.id)}),new RTCSessionDescription({type:t.type,sdp:n})}e.RTCPeerConnection.prototype.removeStream=function(e){this._streams=this._streams||{},this._reverseStreams=this._reverseStreams||{},i.apply(this,[this._streams[e.id]||e]),delete this._reverseStreams[this._streams[e.id]?this._streams[e.id].id:e.id],delete this._streams[e.id]},e.RTCPeerConnection.prototype.addTrack=function(t,n){if("closed"===this.signalingState)throw new DOMException("The RTCPeerConnection's signalingState is 'closed'.","InvalidStateError");let r=[].slice.call(arguments,1);if(1!==r.length||!r[0].getTracks().find(e=>e===t))throw new DOMException("The adapter.js addTrack polyfill only supports a single  stream which is associated with the specified track.","NotSupportedError");if(this.getSenders().find(e=>e.track===t))throw new DOMException("Track already exists.","InvalidAccessError");this._streams=this._streams||{},this._reverseStreams=this._reverseStreams||{};let i=this._streams[n.id];if(i)i.addTrack(t),Promise.resolve().then(()=>{this.dispatchEvent(new Event("negotiationneeded"))});else{let r=new e.MediaStream([t]);this._streams[n.id]=r,this._reverseStreams[r.id]=n,this.addStream(r)}return this.getSenders().find(e=>e.track===t)},["createOffer","createAnswer"].forEach(function(t){let n=e.RTCPeerConnection.prototype[t];e.RTCPeerConnection.prototype[t]=({[t](){let e=arguments,t=arguments.length&&"function"==typeof arguments[0];return t?n.apply(this,[t=>{let n=s(this,t);e[0].apply(null,[n])},t=>{e[1]&&e[1].apply(null,t)},arguments[2]]):n.apply(this,arguments).then(e=>s(this,e))}})[t]});let o=e.RTCPeerConnection.prototype.setLocalDescription;e.RTCPeerConnection.prototype.setLocalDescription=function(){var e,t;let n;return arguments.length&&arguments[0].type?(arguments[0]=(e=this,t=arguments[0],n=t.sdp,Object.keys(e._reverseStreams||[]).forEach(t=>{let r=e._reverseStreams[t],i=e._streams[r.id];n=n.replace(RegExp(r.id,"g"),i.id)}),new RTCSessionDescription({type:t.type,sdp:n})),o.apply(this,arguments)):o.apply(this,arguments)};let a=Object.getOwnPropertyDescriptor(e.RTCPeerConnection.prototype,"localDescription");Object.defineProperty(e.RTCPeerConnection.prototype,"localDescription",{get(){let e=a.get.apply(this);return""===e.type?e:s(this,e)}}),e.RTCPeerConnection.prototype.removeTrack=function(e){let t;if("closed"===this.signalingState)throw new DOMException("The RTCPeerConnection's signalingState is 'closed'.","InvalidStateError");if(!e._pc)throw new DOMException("Argument 1 of RTCPeerConnection.removeTrack does not implement interface RTCRtpSender.","TypeError");if(e._pc!==this)throw new DOMException("Sender was not created by this connection.","InvalidAccessError");this._streams=this._streams||{},Object.keys(this._streams).forEach(n=>{this._streams[n].getTracks().find(t=>e.track===t)&&(t=this._streams[n])}),t&&(1===t.getTracks().length?this.removeStream(this._reverseStreams[t.id]):t.removeTrack(e.track),this.dispatchEvent(new Event("negotiationneeded")))}}function P(e,t){!e.RTCPeerConnection&&e.webkitRTCPeerConnection&&(e.RTCPeerConnection=e.webkitRTCPeerConnection),e.RTCPeerConnection&&t.version<53&&["setLocalDescription","setRemoteDescription","addIceCandidate"].forEach(function(t){let n=e.RTCPeerConnection.prototype[t];e.RTCPeerConnection.prototype[t]=({[t](){return arguments[0]=new("addIceCandidate"===t?e.RTCIceCandidate:e.RTCSessionDescription)(arguments[0]),n.apply(this,arguments)}})[t]})}function w(e,t){l(e,"negotiationneeded",e=>{let n=e.target;if(!(t.version<72)&&(!n.getConfiguration||"plan-b"!==n.getConfiguration().sdpSemantics)||"stable"===n.signalingState)return e})}"use strict";e(y,"shimMediaStream",()=>v),e(y,"shimOnTrack",()=>b),e(y,"shimGetSendersWithDtmf",()=>T),e(y,"shimSenderReceiverGetStats",()=>S),e(y,"shimAddTrackRemoveTrackWithNative",()=>k),e(y,"shimAddTrackRemoveTrack",()=>R),e(y,"shimPeerConnection",()=>P),e(y,"fixNegotiationNeeded",()=>w),e(y,"shimGetUserMedia",()=>C);var E={};function x(e,t){let n=e&&e.navigator,r=e&&e.MediaStreamTrack;if(n.getUserMedia=function(e,t,r){m("navigator.getUserMedia","navigator.mediaDevices.getUserMedia"),n.mediaDevices.getUserMedia(e).then(t,r)},!(t.version>55&&"autoGainControl"in n.mediaDevices.getSupportedConstraints())){let e=function(e,t,n){t in e&&!(n in e)&&(e[n]=e[t],delete e[t])},t=n.mediaDevices.getUserMedia.bind(n.mediaDevices);if(n.mediaDevices.getUserMedia=function(n){return"object"==typeof n&&"object"==typeof n.audio&&(e((n=JSON.parse(JSON.stringify(n))).audio,"autoGainControl","mozAutoGainControl"),e(n.audio,"noiseSuppression","mozNoiseSuppression")),t(n)},r&&r.prototype.getSettings){let t=r.prototype.getSettings;r.prototype.getSettings=function(){let n=t.apply(this,arguments);return e(n,"mozAutoGainControl","autoGainControl"),e(n,"mozNoiseSuppression","noiseSuppression"),n}}if(r&&r.prototype.applyConstraints){let t=r.prototype.applyConstraints;r.prototype.applyConstraints=function(n){return"audio"===this.kind&&"object"==typeof n&&(e(n=JSON.parse(JSON.stringify(n)),"autoGainControl","mozAutoGainControl"),e(n,"noiseSuppression","mozNoiseSuppression")),t.apply(this,[n])}}}}"use strict";function D(e,t){e.navigator.mediaDevices&&"getDisplayMedia"in e.navigator.mediaDevices||e.navigator.mediaDevices&&(e.navigator.mediaDevices.getDisplayMedia=function(n){if(!(n&&n.video)){let e=new DOMException("getDisplayMedia without video constraints is undefined");return e.name="NotFoundError",e.code=8,Promise.reject(e)}return!0===n.video?n.video={mediaSource:t}:n.video.mediaSource=t,e.navigator.mediaDevices.getUserMedia(n)})}"use strict";function I(e){"object"==typeof e&&e.RTCTrackEvent&&"receiver"in e.RTCTrackEvent.prototype&&!("transceiver"in e.RTCTrackEvent.prototype)&&Object.defineProperty(e.RTCTrackEvent.prototype,"transceiver",{get(){return{receiver:this.receiver}}})}function M(e,t){if("object"!=typeof e||!(e.RTCPeerConnection||e.mozRTCPeerConnection))return;!e.RTCPeerConnection&&e.mozRTCPeerConnection&&(e.RTCPeerConnection=e.mozRTCPeerConnection),t.version<53&&["setLocalDescription","setRemoteDescription","addIceCandidate"].forEach(function(t){let n=e.RTCPeerConnection.prototype[t];e.RTCPeerConnection.prototype[t]=({[t](){return arguments[0]=new("addIceCandidate"===t?e.RTCIceCandidate:e.RTCSessionDescription)(arguments[0]),n.apply(this,arguments)}})[t]});let n={inboundrtp:"inbound-rtp",outboundrtp:"outbound-rtp",candidatepair:"candidate-pair",localcandidate:"local-candidate",remotecandidate:"remote-candidate"},r=e.RTCPeerConnection.prototype.getStats;e.RTCPeerConnection.prototype.getStats=function(){let[e,i,s]=arguments;return r.apply(this,[e||null]).then(e=>{if(t.version<53&&!i)try{e.forEach(e=>{e.type=n[e.type]||e.type})}catch(t){if("TypeError"!==t.name)throw t;e.forEach((t,r)=>{e.set(r,Object.assign({},t,{type:n[t.type]||t.type}))})}return e}).then(i,s)}}function O(e){if(!("object"==typeof e&&e.RTCPeerConnection&&e.RTCRtpSender)||e.RTCRtpSender&&"getStats"in e.RTCRtpSender.prototype)return;let t=e.RTCPeerConnection.prototype.getSenders;t&&(e.RTCPeerConnection.prototype.getSenders=function(){let e=t.apply(this,[]);return e.forEach(e=>e._pc=this),e});let n=e.RTCPeerConnection.prototype.addTrack;n&&(e.RTCPeerConnection.prototype.addTrack=function(){let e=n.apply(this,arguments);return e._pc=this,e}),e.RTCRtpSender.prototype.getStats=function(){return this.track?this._pc.getStats(this.track):Promise.resolve(new Map)}}function L(e){if(!("object"==typeof e&&e.RTCPeerConnection&&e.RTCRtpSender)||e.RTCRtpSender&&"getStats"in e.RTCRtpReceiver.prototype)return;let t=e.RTCPeerConnection.prototype.getReceivers;t&&(e.RTCPeerConnection.prototype.getReceivers=function(){let e=t.apply(this,[]);return e.forEach(e=>e._pc=this),e}),l(e,"track",e=>(e.receiver._pc=e.srcElement,e)),e.RTCRtpReceiver.prototype.getStats=function(){return this._pc.getStats(this.track)}}function A(e){!e.RTCPeerConnection||"removeStream"in e.RTCPeerConnection.prototype||(e.RTCPeerConnection.prototype.removeStream=function(e){m("removeStream","removeTrack"),this.getSenders().forEach(t=>{t.track&&e.getTracks().includes(t.track)&&this.removeTrack(t)})})}function j(e){e.DataChannel&&!e.RTCDataChannel&&(e.RTCDataChannel=e.DataChannel)}function B(e){if(!("object"==typeof e&&e.RTCPeerConnection))return;let t=e.RTCPeerConnection.prototype.addTransceiver;t&&(e.RTCPeerConnection.prototype.addTransceiver=function(){this.setParametersPromises=[];let e=arguments[1]&&arguments[1].sendEncodings;void 0===e&&(e=[]);let n=(e=[...e]).length>0;n&&e.forEach(e=>{if("rid"in e&&!/^[a-z0-9]{0,16}$/i.test(e.rid))throw TypeError("Invalid RID value provided.");if("scaleResolutionDownBy"in e&&!(parseFloat(e.scaleResolutionDownBy)>=1))throw RangeError("scale_resolution_down_by must be >= 1.0");if("maxFramerate"in e&&!(parseFloat(e.maxFramerate)>=0))throw RangeError("max_framerate must be >= 0.0")});let r=t.apply(this,arguments);if(n){let{sender:t}=r,n=t.getParameters();"encodings"in n&&(1!==n.encodings.length||0!==Object.keys(n.encodings[0]).length)||(n.encodings=e,t.sendEncodings=e,this.setParametersPromises.push(t.setParameters(n).then(()=>{delete t.sendEncodings}).catch(()=>{delete t.sendEncodings})))}return r})}function U(e){if(!("object"==typeof e&&e.RTCRtpSender))return;let t=e.RTCRtpSender.prototype.getParameters;t&&(e.RTCRtpSender.prototype.getParameters=function(){let e=t.apply(this,arguments);return"encodings"in e||(e.encodings=[].concat(this.sendEncodings||[{}])),e})}function F(e){if(!("object"==typeof e&&e.RTCPeerConnection))return;let t=e.RTCPeerConnection.prototype.createOffer;e.RTCPeerConnection.prototype.createOffer=function(){return this.setParametersPromises&&this.setParametersPromises.length?Promise.all(this.setParametersPromises).then(()=>t.apply(this,arguments)).finally(()=>{this.setParametersPromises=[]}):t.apply(this,arguments)}}function N(e){if(!("object"==typeof e&&e.RTCPeerConnection))return;let t=e.RTCPeerConnection.prototype.createAnswer;e.RTCPeerConnection.prototype.createAnswer=function(){return this.setParametersPromises&&this.setParametersPromises.length?Promise.all(this.setParametersPromises).then(()=>t.apply(this,arguments)).finally(()=>{this.setParametersPromises=[]}):t.apply(this,arguments)}}"use strict";e(E,"shimOnTrack",()=>I),e(E,"shimPeerConnection",()=>M),e(E,"shimSenderGetStats",()=>O),e(E,"shimReceiverGetStats",()=>L),e(E,"shimRemoveStream",()=>A),e(E,"shimRTCDataChannel",()=>j),e(E,"shimAddTransceiver",()=>B),e(E,"shimGetParameters",()=>U),e(E,"shimCreateOffer",()=>F),e(E,"shimCreateAnswer",()=>N),e(E,"shimGetUserMedia",()=>x),e(E,"shimGetDisplayMedia",()=>D);var z={};function $(e){if("object"==typeof e&&e.RTCPeerConnection){if("getLocalStreams"in e.RTCPeerConnection.prototype||(e.RTCPeerConnection.prototype.getLocalStreams=function(){return this._localStreams||(this._localStreams=[]),this._localStreams}),!("addStream"in e.RTCPeerConnection.prototype)){let t=e.RTCPeerConnection.prototype.addTrack;e.RTCPeerConnection.prototype.addStream=function(e){this._localStreams||(this._localStreams=[]),this._localStreams.includes(e)||this._localStreams.push(e),e.getAudioTracks().forEach(n=>t.call(this,n,e)),e.getVideoTracks().forEach(n=>t.call(this,n,e))},e.RTCPeerConnection.prototype.addTrack=function(e,...n){return n&&n.forEach(e=>{this._localStreams?this._localStreams.includes(e)||this._localStreams.push(e):this._localStreams=[e]}),t.apply(this,arguments)}}"removeStream"in e.RTCPeerConnection.prototype||(e.RTCPeerConnection.prototype.removeStream=function(e){this._localStreams||(this._localStreams=[]);let t=this._localStreams.indexOf(e);if(-1===t)return;this._localStreams.splice(t,1);let n=e.getTracks();this.getSenders().forEach(e=>{n.includes(e.track)&&this.removeTrack(e)})})}}function V(e){if("object"==typeof e&&e.RTCPeerConnection&&("getRemoteStreams"in e.RTCPeerConnection.prototype||(e.RTCPeerConnection.prototype.getRemoteStreams=function(){return this._remoteStreams?this._remoteStreams:[]}),!("onaddstream"in e.RTCPeerConnection.prototype))){Object.defineProperty(e.RTCPeerConnection.prototype,"onaddstream",{get(){return this._onaddstream},set(e){this._onaddstream&&(this.removeEventListener("addstream",this._onaddstream),this.removeEventListener("track",this._onaddstreampoly)),this.addEventListener("addstream",this._onaddstream=e),this.addEventListener("track",this._onaddstreampoly=e=>{e.streams.forEach(e=>{if(this._remoteStreams||(this._remoteStreams=[]),this._remoteStreams.includes(e))return;this._remoteStreams.push(e);let t=new Event("addstream");t.stream=e,this.dispatchEvent(t)})})}});let t=e.RTCPeerConnection.prototype.setRemoteDescription;e.RTCPeerConnection.prototype.setRemoteDescription=function(){let e=this;return this._onaddstreampoly||this.addEventListener("track",this._onaddstreampoly=function(t){t.streams.forEach(t=>{if(e._remoteStreams||(e._remoteStreams=[]),e._remoteStreams.indexOf(t)>=0)return;e._remoteStreams.push(t);let n=new Event("addstream");n.stream=t,e.dispatchEvent(n)})}),t.apply(e,arguments)}}}function G(e){if("object"!=typeof e||!e.RTCPeerConnection)return;let t=e.RTCPeerConnection.prototype,n=t.createOffer,r=t.createAnswer,i=t.setLocalDescription,s=t.setRemoteDescription,o=t.addIceCandidate;t.createOffer=function(e,t){let r=arguments.length>=2?arguments[2]:arguments[0],i=n.apply(this,[r]);return t?(i.then(e,t),Promise.resolve()):i},t.createAnswer=function(e,t){let n=arguments.length>=2?arguments[2]:arguments[0],i=r.apply(this,[n]);return t?(i.then(e,t),Promise.resolve()):i};let a=function(e,t,n){let r=i.apply(this,[e]);return n?(r.then(t,n),Promise.resolve()):r};t.setLocalDescription=a,t.setRemoteDescription=a=function(e,t,n){let r=s.apply(this,[e]);return n?(r.then(t,n),Promise.resolve()):r},t.addIceCandidate=function(e,t,n){let r=o.apply(this,[e]);return n?(r.then(t,n),Promise.resolve()):r}}function J(e){let t=e&&e.navigator;if(t.mediaDevices&&t.mediaDevices.getUserMedia){let e=t.mediaDevices,n=e.getUserMedia.bind(e);t.mediaDevices.getUserMedia=e=>n(W(e))}!t.getUserMedia&&t.mediaDevices&&t.mediaDevices.getUserMedia&&(t.getUserMedia=(function(e,n,r){t.mediaDevices.getUserMedia(e).then(n,r)}).bind(t))}function W(e){return e&&void 0!==e.video?Object.assign({},e,{video:function e(t){return _(t)?Object.keys(t).reduce(function(n,r){let i=_(t[r]),s=i?e(t[r]):t[r],o=i&&!Object.keys(s).length;return void 0===s||o?n:Object.assign(n,{[r]:s})},{}):t}(e.video)}):e}function Y(e){if(!e.RTCPeerConnection)return;let t=e.RTCPeerConnection;e.RTCPeerConnection=function(e,n){if(e&&e.iceServers){let t=[];for(let n=0;n<e.iceServers.length;n++){let r=e.iceServers[n];void 0===r.urls&&r.url?(m("RTCIceServer.url","RTCIceServer.urls"),(r=JSON.parse(JSON.stringify(r))).urls=r.url,delete r.url,t.push(r)):t.push(e.iceServers[n])}e.iceServers=t}return new t(e,n)},e.RTCPeerConnection.prototype=t.prototype,"generateCertificate"in t&&Object.defineProperty(e.RTCPeerConnection,"generateCertificate",{get:()=>t.generateCertificate})}function H(e){"object"==typeof e&&e.RTCTrackEvent&&"receiver"in e.RTCTrackEvent.prototype&&!("transceiver"in e.RTCTrackEvent.prototype)&&Object.defineProperty(e.RTCTrackEvent.prototype,"transceiver",{get(){return{receiver:this.receiver}}})}function K(e){let t=e.RTCPeerConnection.prototype.createOffer;e.RTCPeerConnection.prototype.createOffer=function(e){if(e){void 0!==e.offerToReceiveAudio&&(e.offerToReceiveAudio=!!e.offerToReceiveAudio);let t=this.getTransceivers().find(e=>"audio"===e.receiver.track.kind);!1===e.offerToReceiveAudio&&t?"sendrecv"===t.direction?t.setDirection?t.setDirection("sendonly"):t.direction="sendonly":"recvonly"===t.direction&&(t.setDirection?t.setDirection("inactive"):t.direction="inactive"):!0!==e.offerToReceiveAudio||t||this.addTransceiver("audio",{direction:"recvonly"}),void 0!==e.offerToReceiveVideo&&(e.offerToReceiveVideo=!!e.offerToReceiveVideo);let n=this.getTransceivers().find(e=>"video"===e.receiver.track.kind);!1===e.offerToReceiveVideo&&n?"sendrecv"===n.direction?n.setDirection?n.setDirection("sendonly"):n.direction="sendonly":"recvonly"===n.direction&&(n.setDirection?n.setDirection("inactive"):n.direction="inactive"):!0!==e.offerToReceiveVideo||n||this.addTransceiver("video",{direction:"recvonly"})}return t.apply(this,arguments)}}function X(e){"object"!=typeof e||e.AudioContext||(e.AudioContext=e.webkitAudioContext)}e(z,"shimLocalStreamsAPI",()=>$),e(z,"shimRemoteStreamsAPI",()=>V),e(z,"shimCallbacksAPI",()=>G),e(z,"shimGetUserMedia",()=>J),e(z,"shimConstraints",()=>W),e(z,"shimRTCIceServerUrls",()=>Y),e(z,"shimTrackEventTransceiver",()=>H),e(z,"shimCreateOfferLegacy",()=>K),e(z,"shimAudioContext",()=>X);var Q={};"use strict";e(Q,"shimRTCIceCandidate",()=>ee),e(Q,"shimRTCIceCandidateRelayProtocol",()=>et),e(Q,"shimMaxMessageSize",()=>en),e(Q,"shimSendThrowTypeError",()=>er),e(Q,"shimConnectionState",()=>ei),e(Q,"removeExtmapAllowMixed",()=>es),e(Q,"shimAddIceCandidateNullOrEmpty",()=>eo),e(Q,"shimParameterlessSetLocalDescription",()=>ea);var q={};"use strict";let Z={};function ee(e){if(!e.RTCIceCandidate||e.RTCIceCandidate&&"foundation"in e.RTCIceCandidate.prototype)return;let n=e.RTCIceCandidate;e.RTCIceCandidate=function(e){if("object"==typeof e&&e.candidate&&0===e.candidate.indexOf("a=")&&((e=JSON.parse(JSON.stringify(e))).candidate=e.candidate.substring(2)),e.candidate&&e.candidate.length){let r=new n(e),i=t(q).parseCandidate(e.candidate);for(let e in i)e in r||Object.defineProperty(r,e,{value:i[e]});return r.toJSON=function(){return{candidate:r.candidate,sdpMid:r.sdpMid,sdpMLineIndex:r.sdpMLineIndex,usernameFragment:r.usernameFragment}},r}return new n(e)},e.RTCIceCandidate.prototype=n.prototype,l(e,"icecandidate",t=>(t.candidate&&Object.defineProperty(t,"candidate",{value:new e.RTCIceCandidate(t.candidate),writable:"false"}),t))}function et(e){!e.RTCIceCandidate||e.RTCIceCandidate&&"relayProtocol"in e.RTCIceCandidate.prototype||l(e,"icecandidate",e=>{if(e.candidate){let n=t(q).parseCandidate(e.candidate.candidate);"relay"===n.type&&(e.candidate.relayProtocol=({0:"tls",1:"tcp",2:"udp"})[n.priority>>24])}return e})}function en(e,n){if(!e.RTCPeerConnection)return;"sctp"in e.RTCPeerConnection.prototype||Object.defineProperty(e.RTCPeerConnection.prototype,"sctp",{get(){return void 0===this._sctp?null:this._sctp}});let r=function(e){if(!e||!e.sdp)return!1;let n=t(q).splitSections(e.sdp);return n.shift(),n.some(e=>{let n=t(q).parseMLine(e);return n&&"application"===n.kind&&-1!==n.protocol.indexOf("SCTP")})},i=function(e){let t=e.sdp.match(/mozilla...THIS_IS_SDPARTA-(\d+)/);if(null===t||t.length<2)return -1;let n=parseInt(t[1],10);return n!=n?-1:n},s=function(e){let t=65536;return"firefox"===n.browser&&(t=n.version<57?-1===e?16384:0x7ffffff5:n.version<60?57===n.version?65535:65536:0x7ffffff5),t},o=function(e,r){let i=65536;"firefox"===n.browser&&57===n.version&&(i=65535);let s=t(q).matchPrefix(e.sdp,"a=max-message-size:");return s.length>0?i=parseInt(s[0].substring(19),10):"firefox"===n.browser&&-1!==r&&(i=0x7ffffff5),i},a=e.RTCPeerConnection.prototype.setRemoteDescription;e.RTCPeerConnection.prototype.setRemoteDescription=function(){if(this._sctp=null,"chrome"===n.browser&&n.version>=76){let{sdpSemantics:e}=this.getConfiguration();"plan-b"===e&&Object.defineProperty(this,"sctp",{get(){return void 0===this._sctp?null:this._sctp},enumerable:!0,configurable:!0})}if(r(arguments[0])){let e,t=i(arguments[0]),n=s(t),r=o(arguments[0],t);e=0===n&&0===r?Number.POSITIVE_INFINITY:0===n||0===r?Math.max(n,r):Math.min(n,r);let a={};Object.defineProperty(a,"maxMessageSize",{get:()=>e}),this._sctp=a}return a.apply(this,arguments)}}function er(e){if(!(e.RTCPeerConnection&&"createDataChannel"in e.RTCPeerConnection.prototype))return;function t(e,t){let n=e.send;e.send=function(){let r=arguments[0],i=r.length||r.size||r.byteLength;if("open"===e.readyState&&t.sctp&&i>t.sctp.maxMessageSize)throw TypeError("Message too large (can send a maximum of "+t.sctp.maxMessageSize+" bytes)");return n.apply(e,arguments)}}let n=e.RTCPeerConnection.prototype.createDataChannel;e.RTCPeerConnection.prototype.createDataChannel=function(){let e=n.apply(this,arguments);return t(e,this),e},l(e,"datachannel",e=>(t(e.channel,e.target),e))}function ei(e){if(!e.RTCPeerConnection||"connectionState"in e.RTCPeerConnection.prototype)return;let t=e.RTCPeerConnection.prototype;Object.defineProperty(t,"connectionState",{get(){return({completed:"connected",checking:"connecting"})[this.iceConnectionState]||this.iceConnectionState},enumerable:!0,configurable:!0}),Object.defineProperty(t,"onconnectionstatechange",{get(){return this._onconnectionstatechange||null},set(e){this._onconnectionstatechange&&(this.removeEventListener("connectionstatechange",this._onconnectionstatechange),delete this._onconnectionstatechange),e&&this.addEventListener("connectionstatechange",this._onconnectionstatechange=e)},enumerable:!0,configurable:!0}),["setLocalDescription","setRemoteDescription"].forEach(e=>{let n=t[e];t[e]=function(){return this._connectionstatechangepoly||(this._connectionstatechangepoly=e=>{let t=e.target;if(t._lastConnectionState!==t.connectionState){t._lastConnectionState=t.connectionState;let n=new Event("connectionstatechange",e);t.dispatchEvent(n)}return e},this.addEventListener("iceconnectionstatechange",this._connectionstatechangepoly)),n.apply(this,arguments)}})}function es(e,t){if(!e.RTCPeerConnection||"chrome"===t.browser&&t.version>=71||"safari"===t.browser&&t.version>=605)return;let n=e.RTCPeerConnection.prototype.setRemoteDescription;e.RTCPeerConnection.prototype.setRemoteDescription=function(t){if(t&&t.sdp&&-1!==t.sdp.indexOf("\na=extmap-allow-mixed")){let n=t.sdp.split("\n").filter(e=>"a=extmap-allow-mixed"!==e.trim()).join("\n");e.RTCSessionDescription&&t instanceof e.RTCSessionDescription?arguments[0]=new e.RTCSessionDescription({type:t.type,sdp:n}):t.sdp=n}return n.apply(this,arguments)}}function eo(e,t){if(!(e.RTCPeerConnection&&e.RTCPeerConnection.prototype))return;let n=e.RTCPeerConnection.prototype.addIceCandidate;n&&0!==n.length&&(e.RTCPeerConnection.prototype.addIceCandidate=function(){return arguments[0]?("chrome"===t.browser&&t.version<78||"firefox"===t.browser&&t.version<68||"safari"===t.browser)&&arguments[0]&&""===arguments[0].candidate?Promise.resolve():n.apply(this,arguments):(arguments[1]&&arguments[1].apply(null),Promise.resolve())})}function ea(e,t){if(!(e.RTCPeerConnection&&e.RTCPeerConnection.prototype))return;let n=e.RTCPeerConnection.prototype.setLocalDescription;n&&0!==n.length&&(e.RTCPeerConnection.prototype.setLocalDescription=function(){let e=arguments[0]||{};if("object"!=typeof e||e.type&&e.sdp)return n.apply(this,arguments);if(!(e={type:e.type,sdp:e.sdp}).type)switch(this.signalingState){case"stable":case"have-local-offer":case"have-remote-pranswer":e.type="offer";break;default:e.type="answer"}return e.sdp||"offer"!==e.type&&"answer"!==e.type?n.apply(this,[e]):("offer"===e.type?this.createOffer:this.createAnswer).apply(this).then(e=>n.apply(this,[e]))})}"use strict";Z.generateIdentifier=function(){return Math.random().toString(36).substring(2,12)},Z.localCName=Z.generateIdentifier(),Z.splitLines=function(e){return e.trim().split("\n").map(e=>e.trim())},Z.splitSections=function(e){return e.split("\nm=").map((e,t)=>(t>0?"m="+e:e).trim()+"\r\n")},Z.getDescription=function(e){let t=Z.splitSections(e);return t&&t[0]},Z.getMediaSections=function(e){let t=Z.splitSections(e);return t.shift(),t},Z.matchPrefix=function(e,t){return Z.splitLines(e).filter(e=>0===e.indexOf(t))},Z.parseCandidate=function(e){let t,n={foundation:(t=0===e.indexOf("a=candidate:")?e.substring(12).split(" "):e.substring(10).split(" "))[0],component:{1:"rtp",2:"rtcp"}[t[1]]||t[1],protocol:t[2].toLowerCase(),priority:parseInt(t[3],10),ip:t[4],address:t[4],port:parseInt(t[5],10),type:t[7]};for(let e=8;e<t.length;e+=2)switch(t[e]){case"raddr":n.relatedAddress=t[e+1];break;case"rport":n.relatedPort=parseInt(t[e+1],10);break;case"tcptype":n.tcpType=t[e+1];break;case"ufrag":n.ufrag=t[e+1],n.usernameFragment=t[e+1];break;default:void 0===n[t[e]]&&(n[t[e]]=t[e+1])}return n},Z.writeCandidate=function(e){let t=[];t.push(e.foundation);let n=e.component;"rtp"===n?t.push(1):"rtcp"===n?t.push(2):t.push(n),t.push(e.protocol.toUpperCase()),t.push(e.priority),t.push(e.address||e.ip),t.push(e.port);let r=e.type;return t.push("typ"),t.push(r),"host"!==r&&e.relatedAddress&&e.relatedPort&&(t.push("raddr"),t.push(e.relatedAddress),t.push("rport"),t.push(e.relatedPort)),e.tcpType&&"tcp"===e.protocol.toLowerCase()&&(t.push("tcptype"),t.push(e.tcpType)),(e.usernameFragment||e.ufrag)&&(t.push("ufrag"),t.push(e.usernameFragment||e.ufrag)),"candidate:"+t.join(" ")},Z.parseIceOptions=function(e){return e.substring(14).split(" ")},Z.parseRtpMap=function(e){let t=e.substring(9).split(" "),n={payloadType:parseInt(t.shift(),10)};return n.name=(t=t[0].split("/"))[0],n.clockRate=parseInt(t[1],10),n.channels=3===t.length?parseInt(t[2],10):1,n.numChannels=n.channels,n},Z.writeRtpMap=function(e){let t=e.payloadType;void 0!==e.preferredPayloadType&&(t=e.preferredPayloadType);let n=e.channels||e.numChannels||1;return"a=rtpmap:"+t+" "+e.name+"/"+e.clockRate+(1!==n?"/"+n:"")+"\r\n"},Z.parseExtmap=function(e){let t=e.substring(9).split(" ");return{id:parseInt(t[0],10),direction:t[0].indexOf("/")>0?t[0].split("/")[1]:"sendrecv",uri:t[1],attributes:t.slice(2).join(" ")}},Z.writeExtmap=function(e){return"a=extmap:"+(e.id||e.preferredId)+(e.direction&&"sendrecv"!==e.direction?"/"+e.direction:"")+" "+e.uri+(e.attributes?" "+e.attributes:"")+"\r\n"},Z.parseFmtp=function(e){let t,n={},r=e.substring(e.indexOf(" ")+1).split(";");for(let e=0;e<r.length;e++)n[(t=r[e].trim().split("="))[0].trim()]=t[1];return n},Z.writeFmtp=function(e){let t="",n=e.payloadType;if(void 0!==e.preferredPayloadType&&(n=e.preferredPayloadType),e.parameters&&Object.keys(e.parameters).length){let r=[];Object.keys(e.parameters).forEach(t=>{void 0!==e.parameters[t]?r.push(t+"="+e.parameters[t]):r.push(t)}),t+="a=fmtp:"+n+" "+r.join(";")+"\r\n"}return t},Z.parseRtcpFb=function(e){let t=e.substring(e.indexOf(" ")+1).split(" ");return{type:t.shift(),parameter:t.join(" ")}},Z.writeRtcpFb=function(e){let t="",n=e.payloadType;return void 0!==e.preferredPayloadType&&(n=e.preferredPayloadType),e.rtcpFeedback&&e.rtcpFeedback.length&&e.rtcpFeedback.forEach(e=>{t+="a=rtcp-fb:"+n+" "+e.type+(e.parameter&&e.parameter.length?" "+e.parameter:"")+"\r\n"}),t},Z.parseSsrcMedia=function(e){let t=e.indexOf(" "),n={ssrc:parseInt(e.substring(7,t),10)},r=e.indexOf(":",t);return r>-1?(n.attribute=e.substring(t+1,r),n.value=e.substring(r+1)):n.attribute=e.substring(t+1),n},Z.parseSsrcGroup=function(e){let t=e.substring(13).split(" ");return{semantics:t.shift(),ssrcs:t.map(e=>parseInt(e,10))}},Z.getMid=function(e){let t=Z.matchPrefix(e,"a=mid:")[0];if(t)return t.substring(6)},Z.parseFingerprint=function(e){let t=e.substring(14).split(" ");return{algorithm:t[0].toLowerCase(),value:t[1].toUpperCase()}},Z.getDtlsParameters=function(e,t){return{role:"auto",fingerprints:Z.matchPrefix(e+t,"a=fingerprint:").map(Z.parseFingerprint)}},Z.writeDtlsParameters=function(e,t){let n="a=setup:"+t+"\r\n";return e.fingerprints.forEach(e=>{n+="a=fingerprint:"+e.algorithm+" "+e.value+"\r\n"}),n},Z.parseCryptoLine=function(e){let t=e.substring(9).split(" ");return{tag:parseInt(t[0],10),cryptoSuite:t[1],keyParams:t[2],sessionParams:t.slice(3)}},Z.writeCryptoLine=function(e){return"a=crypto:"+e.tag+" "+e.cryptoSuite+" "+("object"==typeof e.keyParams?Z.writeCryptoKeyParams(e.keyParams):e.keyParams)+(e.sessionParams?" "+e.sessionParams.join(" "):"")+"\r\n"},Z.parseCryptoKeyParams=function(e){if(0!==e.indexOf("inline:"))return null;let t=e.substring(7).split("|");return{keyMethod:"inline",keySalt:t[0],lifeTime:t[1],mkiValue:t[2]?t[2].split(":")[0]:void 0,mkiLength:t[2]?t[2].split(":")[1]:void 0}},Z.writeCryptoKeyParams=function(e){return e.keyMethod+":"+e.keySalt+(e.lifeTime?"|"+e.lifeTime:"")+(e.mkiValue&&e.mkiLength?"|"+e.mkiValue+":"+e.mkiLength:"")},Z.getCryptoParameters=function(e,t){return Z.matchPrefix(e+t,"a=crypto:").map(Z.parseCryptoLine)},Z.getIceParameters=function(e,t){let n=Z.matchPrefix(e+t,"a=ice-ufrag:")[0],r=Z.matchPrefix(e+t,"a=ice-pwd:")[0];return n&&r?{usernameFragment:n.substring(12),password:r.substring(10)}:null},Z.writeIceParameters=function(e){let t="a=ice-ufrag:"+e.usernameFragment+"\r\na=ice-pwd:"+e.password+"\r\n";return e.iceLite&&(t+="a=ice-lite\r\n"),t},Z.parseRtpParameters=function(e){let t={codecs:[],headerExtensions:[],fecMechanisms:[],rtcp:[]},n=Z.splitLines(e)[0].split(" ");t.profile=n[2];for(let r=3;r<n.length;r++){let i=n[r],s=Z.matchPrefix(e,"a=rtpmap:"+i+" ")[0];if(s){let n=Z.parseRtpMap(s),r=Z.matchPrefix(e,"a=fmtp:"+i+" ");switch(n.parameters=r.length?Z.parseFmtp(r[0]):{},n.rtcpFeedback=Z.matchPrefix(e,"a=rtcp-fb:"+i+" ").map(Z.parseRtcpFb),t.codecs.push(n),n.name.toUpperCase()){case"RED":case"ULPFEC":t.fecMechanisms.push(n.name.toUpperCase())}}}Z.matchPrefix(e,"a=extmap:").forEach(e=>{t.headerExtensions.push(Z.parseExtmap(e))});let r=Z.matchPrefix(e,"a=rtcp-fb:* ").map(Z.parseRtcpFb);return t.codecs.forEach(e=>{r.forEach(t=>{e.rtcpFeedback.find(e=>e.type===t.type&&e.parameter===t.parameter)||e.rtcpFeedback.push(t)})}),t},Z.writeRtpDescription=function(e,t){let n="";n+="m="+e+" ",n+=t.codecs.length>0?"9":"0",n+=" "+(t.profile||"UDP/TLS/RTP/SAVPF")+" ",n+=t.codecs.map(e=>void 0!==e.preferredPayloadType?e.preferredPayloadType:e.payloadType).join(" ")+"\r\n",n+="c=IN IP4 0.0.0.0\r\n",n+="a=rtcp:9 IN IP4 0.0.0.0\r\n",t.codecs.forEach(e=>{n+=Z.writeRtpMap(e),n+=Z.writeFmtp(e),n+=Z.writeRtcpFb(e)});let r=0;return t.codecs.forEach(e=>{e.maxptime>r&&(r=e.maxptime)}),r>0&&(n+="a=maxptime:"+r+"\r\n"),t.headerExtensions&&t.headerExtensions.forEach(e=>{n+=Z.writeExtmap(e)}),n},Z.parseRtpEncodingParameters=function(e){let t,n=[],r=Z.parseRtpParameters(e),i=-1!==r.fecMechanisms.indexOf("RED"),s=-1!==r.fecMechanisms.indexOf("ULPFEC"),o=Z.matchPrefix(e,"a=ssrc:").map(e=>Z.parseSsrcMedia(e)).filter(e=>"cname"===e.attribute),a=o.length>0&&o[0].ssrc,c=Z.matchPrefix(e,"a=ssrc-group:FID").map(e=>e.substring(17).split(" ").map(e=>parseInt(e,10)));c.length>0&&c[0].length>1&&c[0][0]===a&&(t=c[0][1]),r.codecs.forEach(e=>{if("RTX"===e.name.toUpperCase()&&e.parameters.apt){let r={ssrc:a,codecPayloadType:parseInt(e.parameters.apt,10)};a&&t&&(r.rtx={ssrc:t}),n.push(r),i&&((r=JSON.parse(JSON.stringify(r))).fec={ssrc:a,mechanism:s?"red+ulpfec":"red"},n.push(r))}}),0===n.length&&a&&n.push({ssrc:a});let p=Z.matchPrefix(e,"b=");return p.length&&(p=0===p[0].indexOf("b=TIAS:")?parseInt(p[0].substring(7),10):0===p[0].indexOf("b=AS:")?950*parseInt(p[0].substring(5),10)-16e3:void 0,n.forEach(e=>{e.maxBitrate=p})),n},Z.parseRtcpParameters=function(e){let t={},n=Z.matchPrefix(e,"a=ssrc:").map(e=>Z.parseSsrcMedia(e)).filter(e=>"cname"===e.attribute)[0];n&&(t.cname=n.value,t.ssrc=n.ssrc);let r=Z.matchPrefix(e,"a=rtcp-rsize");return t.reducedSize=r.length>0,t.compound=0===r.length,t.mux=Z.matchPrefix(e,"a=rtcp-mux").length>0,t},Z.writeRtcpParameters=function(e){let t="";return e.reducedSize&&(t+="a=rtcp-rsize\r\n"),e.mux&&(t+="a=rtcp-mux\r\n"),void 0!==e.ssrc&&e.cname&&(t+="a=ssrc:"+e.ssrc+" cname:"+e.cname+"\r\n"),t},Z.parseMsid=function(e){let t,n=Z.matchPrefix(e,"a=msid:");if(1===n.length)return{stream:(t=n[0].substring(7).split(" "))[0],track:t[1]};let r=Z.matchPrefix(e,"a=ssrc:").map(e=>Z.parseSsrcMedia(e)).filter(e=>"msid"===e.attribute);if(r.length>0)return{stream:(t=r[0].value.split(" "))[0],track:t[1]}},Z.parseSctpDescription=function(e){let t,n=Z.parseMLine(e),r=Z.matchPrefix(e,"a=max-message-size:");r.length>0&&(t=parseInt(r[0].substring(19),10)),isNaN(t)&&(t=65536);let i=Z.matchPrefix(e,"a=sctp-port:");if(i.length>0)return{port:parseInt(i[0].substring(12),10),protocol:n.fmt,maxMessageSize:t};let s=Z.matchPrefix(e,"a=sctpmap:");if(s.length>0){let e=s[0].substring(10).split(" ");return{port:parseInt(e[0],10),protocol:e[1],maxMessageSize:t}}},Z.writeSctpDescription=function(e,t){let n=[];return n="DTLS/SCTP"!==e.protocol?["m="+e.kind+" 9 "+e.protocol+" "+t.protocol+"\r\n","c=IN IP4 0.0.0.0\r\n","a=sctp-port:"+t.port+"\r\n"]:["m="+e.kind+" 9 "+e.protocol+" "+t.port+"\r\n","c=IN IP4 0.0.0.0\r\n","a=sctpmap:"+t.port+" "+t.protocol+" 65535\r\n"],void 0!==t.maxMessageSize&&n.push("a=max-message-size:"+t.maxMessageSize+"\r\n"),n.join("")},Z.generateSessionId=function(){return Math.random().toString().substr(2,22)},Z.writeSessionBoilerplate=function(e,t,n){return"v=0\r\no="+(n||"thisisadapterortc")+" "+(e||Z.generateSessionId())+" "+(void 0!==t?t:2)+" IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"},Z.getDirection=function(e,t){let n=Z.splitLines(e);for(let e=0;e<n.length;e++)switch(n[e]){case"a=sendrecv":case"a=sendonly":case"a=recvonly":case"a=inactive":return n[e].substring(2)}return t?Z.getDirection(t):"sendrecv"},Z.getKind=function(e){return Z.splitLines(e)[0].split(" ")[0].substring(2)},Z.isRejected=function(e){return"0"===e.split(" ",2)[1]},Z.parseMLine=function(e){let t=Z.splitLines(e)[0].substring(2).split(" ");return{kind:t[0],port:parseInt(t[1],10),protocol:t[2],fmt:t.slice(3).join(" ")}},Z.parseOLine=function(e){let t=Z.matchPrefix(e,"o=")[0].substring(2).split(" ");return{username:t[0],sessionId:t[1],sessionVersion:parseInt(t[2],10),netType:t[3],addressType:t[4],address:t[5]}},Z.isValidSDP=function(e){if("string"!=typeof e||0===e.length)return!1;let t=Z.splitLines(e);for(let e=0;e<t.length;e++)if(t[e].length<2||"="!==t[e].charAt(1))return!1;return!0},q=Z;let ec=function({window:e}={},t={shimChrome:!0,shimFirefox:!0,shimSafari:!0}){let n=function(e){let t={browser:null,version:null};if(void 0===e||!e.navigator||!e.navigator.userAgent)return t.browser="Not a browser.",t;let{navigator:n}=e;if(n.userAgentData&&n.userAgentData.brands){let e=n.userAgentData.brands.find(e=>"Chromium"===e.brand);if(e)return{browser:"chrome",version:parseInt(e.version,10)}}return n.mozGetUserMedia?(t.browser="firefox",t.version=d(n.userAgent,/Firefox\/(\d+)\./,1)):n.webkitGetUserMedia||!1===e.isSecureContext&&e.webkitRTCPeerConnection?(t.browser="chrome",t.version=d(n.userAgent,/Chrom(e|ium)\/(\d+)\./,2)):e.RTCPeerConnection&&n.userAgent.match(/AppleWebKit\/(\d+)\./)?(t.browser="safari",t.version=d(n.userAgent,/AppleWebKit\/(\d+)\./,1),t.supportsUnifiedPlan=e.RTCRtpTransceiver&&"currentDirection"in e.RTCRtpTransceiver.prototype):t.browser="Not a supported browser.",t}(e),r={browserDetails:n,commonShim:Q,extractVersion:d,disableLog:h,disableWarnings:u,sdp:q};switch(n.browser){case"chrome":if(!y||!y.shimPeerConnection||!t.shimChrome){f("Chrome shim is not included in this adapter release.");break}if(null===n.version){f("Chrome shim can not determine version, not shimming.");break}f("adapter.js shimming chrome."),r.browserShim=y,eo(e,n),ea(e,n),y.shimGetUserMedia(e,n),y.shimMediaStream(e,n),y.shimPeerConnection(e,n),y.shimOnTrack(e,n),y.shimAddTrackRemoveTrack(e,n),y.shimGetSendersWithDtmf(e,n),y.shimSenderReceiverGetStats(e,n),y.fixNegotiationNeeded(e,n),ee(e,n),et(e,n),ei(e,n),en(e,n),er(e,n),es(e,n);break;case"firefox":if(!E||!E.shimPeerConnection||!t.shimFirefox){f("Firefox shim is not included in this adapter release.");break}f("adapter.js shimming firefox."),r.browserShim=E,eo(e,n),ea(e,n),E.shimGetUserMedia(e,n),E.shimPeerConnection(e,n),E.shimOnTrack(e,n),E.shimRemoveStream(e,n),E.shimSenderGetStats(e,n),E.shimReceiverGetStats(e,n),E.shimRTCDataChannel(e,n),E.shimAddTransceiver(e,n),E.shimGetParameters(e,n),E.shimCreateOffer(e,n),E.shimCreateAnswer(e,n),ee(e,n),ei(e,n),en(e,n),er(e,n);break;case"safari":if(!z||!t.shimSafari){f("Safari shim is not included in this adapter release.");break}f("adapter.js shimming safari."),r.browserShim=z,eo(e,n),ea(e,n),z.shimRTCIceServerUrls(e,n),z.shimCreateOfferLegacy(e,n),z.shimCallbacksAPI(e,n),z.shimLocalStreamsAPI(e,n),z.shimRemoteStreamsAPI(e,n),z.shimTrackEventTransceiver(e,n),z.shimGetUserMedia(e,n),z.shimAudioContext(e,n),ee(e,n),et(e,n),en(e,n),er(e,n),es(e,n);break;default:f("Unsupported browser!")}return r}({window:"undefined"==typeof window?void 0:window}),ep=ec.default||ec,ed=new class{isWebRTCSupported(){return"undefined"!=typeof RTCPeerConnection}isBrowserSupported(){let e=this.getBrowser(),t=this.getVersion();return!!this.supportedBrowsers.includes(e)&&("chrome"===e?t>=this.minChromeVersion:"firefox"===e?t>=this.minFirefoxVersion:"safari"===e&&!this.isIOS&&t>=this.minSafariVersion)}getBrowser(){return ep.browserDetails.browser}getVersion(){return ep.browserDetails.version||0}isUnifiedPlanSupported(){let e,t=this.getBrowser(),n=ep.browserDetails.version||0;if("chrome"===t&&n<this.minChromeVersion)return!1;if("firefox"===t&&n>=this.minFirefoxVersion)return!0;if(!window.RTCRtpTransceiver||!("currentDirection"in RTCRtpTransceiver.prototype))return!1;let r=!1;try{(e=new RTCPeerConnection).addTransceiver("audio"),r=!0}catch(e){}finally{e&&e.close()}return r}toString(){return`Supports:
+    browser:${this.getBrowser()}
+    version:${this.getVersion()}
+    isIOS:${this.isIOS}
+    isWebRTCSupported:${this.isWebRTCSupported()}
+    isBrowserSupported:${this.isBrowserSupported()}
+    isUnifiedPlanSupported:${this.isUnifiedPlanSupported()}`}constructor(){this.isIOS="undefined"!=typeof navigator&&["iPad","iPhone","iPod"].includes(navigator.platform),this.supportedBrowsers=["firefox","chrome","safari"],this.minFirefoxVersion=59,this.minChromeVersion=72,this.minSafariVersion=605}},el=e=>!e||/^[A-Za-z0-9]+(?:[ _-][A-Za-z0-9]+)*$/.test(e),eh=()=>Math.random().toString(36).slice(2),eu={iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:["turn:eu-0.turn.peerjs.com:3478","turn:us-0.turn.peerjs.com:3478"],username:"peerjs",credential:"peerjsp"}],sdpSemantics:"unified-plan"},ef=new class extends n{noop(){}blobToArrayBuffer(e,t){let n=new FileReader;return n.onload=function(e){e.target&&t(e.target.result)},n.readAsArrayBuffer(e),n}binaryStringToArrayBuffer(e){let t=new Uint8Array(e.length);for(let n=0;n<e.length;n++)t[n]=255&e.charCodeAt(n);return t.buffer}isSecure(){return"https:"===location.protocol}constructor(...e){super(...e),this.CLOUD_HOST="0.peerjs.com",this.CLOUD_PORT=443,this.chunkedBrowsers={Chrome:1,chrome:1},this.defaultConfig=eu,this.browser=ed.getBrowser(),this.browserVersion=ed.getVersion(),this.pack=s,this.unpack=i,this.supports=function(){let e,t={browser:ed.isBrowserSupported(),webRTC:ed.isWebRTCSupported(),audioVideo:!1,data:!1,binaryBlob:!1,reliable:!1};if(!t.webRTC)return t;try{let n;e=new RTCPeerConnection(eu),t.audioVideo=!0;try{n=e.createDataChannel("_PEERJSTEST",{ordered:!0}),t.data=!0,t.reliable=!!n.ordered;try{n.binaryType="blob",t.binaryBlob=!ed.isIOS}catch(e){}}catch(e){}finally{n&&n.close()}}catch(e){}finally{e&&e.close()}return t}(),this.validateId=el,this.randomToken=eh}};"use strict";var em=new class{get logLevel(){return this._logLevel}set logLevel(e){this._logLevel=e}log(...e){this._logLevel>=3&&this._print(3,...e)}warn(...e){this._logLevel>=2&&this._print(2,...e)}error(...e){this._logLevel>=1&&this._print(1,...e)}setLogFunction(e){this._print=e}_print(e,...t){let n=["PeerJS: ",...t];for(let e in n)n[e]instanceof Error&&(n[e]="("+n[e].name+") "+n[e].message);e>=3?console.log(...n):e>=2?console.warn("WARNING",...n):e>=1&&console.error("ERROR",...n)}constructor(){this._logLevel=0}},e_={},eg=Object.prototype.hasOwnProperty,ey="~";function eC(){}function ev(e,t,n){this.fn=e,this.context=t,this.once=n||!1}function eb(e,t,n,r,i){if("function"!=typeof n)throw TypeError("The listener must be a function");var s=new ev(n,r||e,i),o=ey?ey+t:t;return e._events[o]?e._events[o].fn?e._events[o]=[e._events[o],s]:e._events[o].push(s):(e._events[o]=s,e._eventsCount++),e}function eT(e,t){0==--e._eventsCount?e._events=new eC:delete e._events[t]}function eS(){this._events=new eC,this._eventsCount=0}Object.create&&(eC.prototype=Object.create(null),new eC().__proto__||(ey=!1)),eS.prototype.eventNames=function(){var e,t,n=[];if(0===this._eventsCount)return n;for(t in e=this._events)eg.call(e,t)&&n.push(ey?t.slice(1):t);return Object.getOwnPropertySymbols?n.concat(Object.getOwnPropertySymbols(e)):n},eS.prototype.listeners=function(e){var t=ey?ey+e:e,n=this._events[t];if(!n)return[];if(n.fn)return[n.fn];for(var r=0,i=n.length,s=Array(i);r<i;r++)s[r]=n[r].fn;return s},eS.prototype.listenerCount=function(e){var t=ey?ey+e:e,n=this._events[t];return n?n.fn?1:n.length:0},eS.prototype.emit=function(e,t,n,r,i,s){var o=ey?ey+e:e;if(!this._events[o])return!1;var a,c,p=this._events[o],d=arguments.length;if(p.fn){switch(p.once&&this.removeListener(e,p.fn,void 0,!0),d){case 1:return p.fn.call(p.context),!0;case 2:return p.fn.call(p.context,t),!0;case 3:return p.fn.call(p.context,t,n),!0;case 4:return p.fn.call(p.context,t,n,r),!0;case 5:return p.fn.call(p.context,t,n,r,i),!0;case 6:return p.fn.call(p.context,t,n,r,i,s),!0}for(c=1,a=Array(d-1);c<d;c++)a[c-1]=arguments[c];p.fn.apply(p.context,a)}else{var l,h=p.length;for(c=0;c<h;c++)switch(p[c].once&&this.removeListener(e,p[c].fn,void 0,!0),d){case 1:p[c].fn.call(p[c].context);break;case 2:p[c].fn.call(p[c].context,t);break;case 3:p[c].fn.call(p[c].context,t,n);break;case 4:p[c].fn.call(p[c].context,t,n,r);break;default:if(!a)for(l=1,a=Array(d-1);l<d;l++)a[l-1]=arguments[l];p[c].fn.apply(p[c].context,a)}}return!0},eS.prototype.on=function(e,t,n){return eb(this,e,t,n,!1)},eS.prototype.once=function(e,t,n){return eb(this,e,t,n,!0)},eS.prototype.removeListener=function(e,t,n,r){var i=ey?ey+e:e;if(!this._events[i])return this;if(!t)return eT(this,i),this;var s=this._events[i];if(s.fn)s.fn!==t||r&&!s.once||n&&s.context!==n||eT(this,i);else{for(var o=0,a=[],c=s.length;o<c;o++)(s[o].fn!==t||r&&!s[o].once||n&&s[o].context!==n)&&a.push(s[o]);a.length?this._events[i]=1===a.length?a[0]:a:eT(this,i)}return this},eS.prototype.removeAllListeners=function(e){var t;return e?(t=ey?ey+e:e,this._events[t]&&eT(this,t)):(this._events=new eC,this._eventsCount=0),this},eS.prototype.off=eS.prototype.removeListener,eS.prototype.addListener=eS.prototype.on,eS.prefixed=ey,eS.EventEmitter=eS,e_=eS;var ek=function(e){return e.Data="data",e.Media="media",e}({}),eR=function(e){return e.BrowserIncompatible="browser-incompatible",e.Disconnected="disconnected",e.InvalidID="invalid-id",e.InvalidKey="invalid-key",e.Network="network",e.PeerUnavailable="peer-unavailable",e.SslUnavailable="ssl-unavailable",e.ServerError="server-error",e.SocketError="socket-error",e.SocketClosed="socket-closed",e.UnavailableID="unavailable-id",e.WebRTC="webrtc",e}({}),eP=function(e){return e.NegotiationFailed="negotiation-failed",e.ConnectionClosed="connection-closed",e}({}),ew=function(e){return e.NotOpenYet="not-open-yet",e.MessageToBig="message-too-big",e}({}),eE=function(e){return e.Binary="binary",e.BinaryUTF8="binary-utf8",e.JSON="json",e.None="raw",e}({}),ex=function(e){return e.Message="message",e.Disconnected="disconnected",e.Error="error",e.Close="close",e}({}),eD=function(e){return e.Heartbeat="HEARTBEAT",e.Candidate="CANDIDATE",e.Offer="OFFER",e.Answer="ANSWER",e.Open="OPEN",e.Error="ERROR",e.IdTaken="ID-TAKEN",e.InvalidKey="INVALID-KEY",e.Leave="LEAVE",e.Expire="EXPIRE",e}({});let eI="1.5.5";class eM extends e_.EventEmitter{start(e,t){this._id=e;let n=`${this._baseUrl}&id=${e}&token=${t}`;!this._socket&&this._disconnected&&(this._socket=new WebSocket(n+"&version="+eI),this._disconnected=!1,this._socket.onmessage=e=>{let t;try{t=JSON.parse(e.data),em.log("Server message received:",t)}catch(t){em.log("Invalid server message",e.data);return}this.emit(ex.Message,t)},this._socket.onclose=e=>{this._disconnected||(em.log("Socket closed.",e),this._cleanup(),this._disconnected=!0,this.emit(ex.Disconnected))},this._socket.onopen=()=>{this._disconnected||(this._sendQueuedMessages(),em.log("Socket open"),this._scheduleHeartbeat())})}_scheduleHeartbeat(){this._wsPingTimer=setTimeout(()=>{this._sendHeartbeat()},this.pingInterval)}_sendHeartbeat(){if(!this._wsOpen())return void em.log("Cannot send heartbeat, because socket closed");let e=JSON.stringify({type:eD.Heartbeat});this._socket.send(e),this._scheduleHeartbeat()}_wsOpen(){return!!this._socket&&1===this._socket.readyState}_sendQueuedMessages(){let e=[...this._messagesQueue];for(let t of(this._messagesQueue=[],e))this.send(t)}send(e){if(this._disconnected)return;if(!this._id)return void this._messagesQueue.push(e);if(!e.type)return void this.emit(ex.Error,"Invalid message");if(!this._wsOpen())return;let t=JSON.stringify(e);this._socket.send(t)}close(){this._disconnected||(this._cleanup(),this._disconnected=!0)}_cleanup(){this._socket&&(this._socket.onopen=this._socket.onmessage=this._socket.onclose=null,this._socket.close(),this._socket=void 0),clearTimeout(this._wsPingTimer)}constructor(e,t,n,r,i,s=5e3){super(),this.pingInterval=s,this._disconnected=!0,this._messagesQueue=[],this._baseUrl=(e?"wss://":"ws://")+t+":"+n+r+"peerjs?key="+i}}class eO{startConnection(e){let t=this._startPeerConnection();if(this.connection.peerConnection=t,this.connection.type===ek.Media&&e._stream&&this._addTracksToConnection(e._stream,t),e.originator){let n=this.connection,r={ordered:!!e.reliable},i=t.createDataChannel(n.label,r);n._initializeDataChannel(i),this._makeOffer()}else this.handleSDP("OFFER",e.sdp)}_startPeerConnection(){em.log("Creating RTCPeerConnection.");let e=new RTCPeerConnection(this.connection.provider.options.config);return this._setupListeners(e),e}_setupListeners(e){let t=this.connection.peer,n=this.connection.connectionId,r=this.connection.type,i=this.connection.provider;em.log("Listening for ICE candidates."),e.onicecandidate=e=>{e.candidate&&e.candidate.candidate&&(em.log(`Received ICE candidates for ${t}:`,e.candidate),i.socket.send({type:eD.Candidate,payload:{candidate:e.candidate,type:r,connectionId:n},dst:t}))},e.oniceconnectionstatechange=()=>{switch(e.iceConnectionState){case"failed":em.log("iceConnectionState is failed, closing connections to "+t),this.connection.emitError(eP.NegotiationFailed,"Negotiation of connection to "+t+" failed."),this.connection.close();break;case"closed":em.log("iceConnectionState is closed, closing connections to "+t),this.connection.emitError(eP.ConnectionClosed,"Connection to "+t+" closed."),this.connection.close();break;case"disconnected":em.log("iceConnectionState changed to disconnected on the connection with "+t);break;case"completed":e.onicecandidate=()=>{}}this.connection.emit("iceStateChanged",e.iceConnectionState)},em.log("Listening for data channel"),e.ondatachannel=e=>{em.log("Received data channel");let r=e.channel;i.getConnection(t,n)._initializeDataChannel(r)},em.log("Listening for remote stream"),e.ontrack=e=>{em.log("Received remote stream");let r=e.streams[0],s=i.getConnection(t,n);s.type===ek.Media&&this._addStreamToMediaConnection(r,s)}}cleanup(){em.log("Cleaning up PeerConnection to "+this.connection.peer);let e=this.connection.peerConnection;if(!e)return;this.connection.peerConnection=null,e.onicecandidate=e.oniceconnectionstatechange=e.ondatachannel=e.ontrack=()=>{};let t="closed"!==e.signalingState,n=!1,r=this.connection.dataChannel;r&&(n=!!r.readyState&&"closed"!==r.readyState),(t||n)&&e.close()}async _makeOffer(){let e=this.connection.peerConnection,t=this.connection.provider;try{let n=await e.createOffer(this.connection.options.constraints);em.log("Created offer."),this.connection.options.sdpTransform&&"function"==typeof this.connection.options.sdpTransform&&(n.sdp=this.connection.options.sdpTransform(n.sdp)||n.sdp);try{await e.setLocalDescription(n),em.log("Set localDescription:",n,`for:${this.connection.peer}`);let r={sdp:n,type:this.connection.type,connectionId:this.connection.connectionId,metadata:this.connection.metadata};if(this.connection.type===ek.Data){let e=this.connection;r={...r,label:e.label,reliable:e.reliable,serialization:e.serialization}}t.socket.send({type:eD.Offer,payload:r,dst:this.connection.peer})}catch(e){"OperationError: Failed to set local offer sdp: Called in wrong state: kHaveRemoteOffer"!=e&&(t.emitError(eR.WebRTC,e),em.log("Failed to setLocalDescription, ",e))}}catch(e){t.emitError(eR.WebRTC,e),em.log("Failed to createOffer, ",e)}}async _makeAnswer(){let e=this.connection.peerConnection,t=this.connection.provider;try{let n=await e.createAnswer();em.log("Created answer."),this.connection.options.sdpTransform&&"function"==typeof this.connection.options.sdpTransform&&(n.sdp=this.connection.options.sdpTransform(n.sdp)||n.sdp);try{await e.setLocalDescription(n),em.log("Set localDescription:",n,`for:${this.connection.peer}`),t.socket.send({type:eD.Answer,payload:{sdp:n,type:this.connection.type,connectionId:this.connection.connectionId},dst:this.connection.peer})}catch(e){t.emitError(eR.WebRTC,e),em.log("Failed to setLocalDescription, ",e)}}catch(e){t.emitError(eR.WebRTC,e),em.log("Failed to create answer, ",e)}}async handleSDP(e,t){t=new RTCSessionDescription(t);let n=this.connection.peerConnection,r=this.connection.provider;em.log("Setting remote description",t);try{await n.setRemoteDescription(t),em.log(`Set remoteDescription:${e} for:${this.connection.peer}`),"OFFER"===e&&await this._makeAnswer()}catch(e){r.emitError(eR.WebRTC,e),em.log("Failed to setRemoteDescription, ",e)}}async handleCandidate(e){em.log("handleCandidate:",e);try{await this.connection.peerConnection.addIceCandidate(e),em.log(`Added ICE candidate for:${this.connection.peer}`)}catch(e){this.connection.provider.emitError(eR.WebRTC,e),em.log("Failed to handleCandidate, ",e)}}_addTracksToConnection(e,t){if(em.log(`add tracks from stream ${e.id} to peer connection`),!t.addTrack)return em.error("Your browser does't support RTCPeerConnection#addTrack. Ignored.");e.getTracks().forEach(n=>{t.addTrack(n,e)})}_addStreamToMediaConnection(e,t){em.log(`add stream ${e.id} to media connection ${t.connectionId}`),t.addStream(e)}constructor(e){this.connection=e}}class eL extends e_.EventEmitter{emitError(e,t){em.error("Error:",t),this.emit("error",new eA(`${e}`,t))}}class eA extends Error{constructor(e,t){"string"==typeof t?super(t):(super(),Object.assign(this,t)),this.type=e}}class ej extends eL{get open(){return this._open}constructor(e,t,n){super(),this.peer=e,this.provider=t,this.options=n,this._open=!1,this.metadata=n.metadata}}class eB extends ej{get type(){return ek.Media}get localStream(){return this._localStream}get remoteStream(){return this._remoteStream}_initializeDataChannel(e){this.dataChannel=e,this.dataChannel.onopen=()=>{em.log(`DC#${this.connectionId} dc connection success`),this.emit("willCloseOnRemote")},this.dataChannel.onclose=()=>{em.log(`DC#${this.connectionId} dc closed for:`,this.peer),this.close()}}addStream(e){em.log("Receiving stream",e),this._remoteStream=e,super.emit("stream",e)}handleMessage(e){let t=e.type,n=e.payload;switch(e.type){case eD.Answer:this._negotiator.handleSDP(t,n.sdp),this._open=!0;break;case eD.Candidate:this._negotiator.handleCandidate(n.candidate);break;default:em.warn(`Unrecognized message type:${t} from peer:${this.peer}`)}}answer(e,t={}){if(this._localStream)return void em.warn("Local stream already exists on this MediaConnection. Are you answering a call twice?");for(let n of(this._localStream=e,t&&t.sdpTransform&&(this.options.sdpTransform=t.sdpTransform),this._negotiator.startConnection({...this.options._payload,_stream:e}),this.provider._getMessages(this.connectionId)))this.handleMessage(n);this._open=!0}close(){this._negotiator&&(this._negotiator.cleanup(),this._negotiator=null),this._localStream=null,this._remoteStream=null,this.provider&&(this.provider._removeConnection(this),this.provider=null),this.options&&this.options._stream&&(this.options._stream=null),this.open&&(this._open=!1,super.emit("close"))}constructor(e,t,n){super(e,t,n),this._localStream=this.options._stream,this.connectionId=this.options.connectionId||eB.ID_PREFIX+ef.randomToken(),this._negotiator=new eO(this),this._localStream&&this._negotiator.startConnection({_stream:this._localStream,originator:!0})}}eB.ID_PREFIX="mc_";class eU{_buildRequest(e){let t=this._options.secure?"https":"http",{host:n,port:r,path:i,key:s}=this._options,o=new URL(`${t}://${n}:${r}${i}${s}/${e}`);return o.searchParams.set("ts",`${Date.now()}${Math.random()}`),o.searchParams.set("version",eI),fetch(o.href,{referrerPolicy:this._options.referrerPolicy})}async retrieveId(){try{let e=await this._buildRequest("id");if(200!==e.status)throw Error(`Error. Status:${e.status}`);return e.text()}catch(t){em.error("Error retrieving ID",t);let e="";throw"/"===this._options.path&&this._options.host!==ef.CLOUD_HOST&&(e=" If you passed in a `path` to your self-hosted PeerServer, you'll also need to pass in that same path when creating a new Peer."),Error("Could not get an ID from the server."+e)}}async listAllPeers(){try{let e=await this._buildRequest("peers");if(200!==e.status){if(401===e.status){let e="";throw e=this._options.host===ef.CLOUD_HOST?"It looks like you're using the cloud server. You can email team@peerjs.com to enable peer listing for your API key.":"You need to enable `allow_discovery` on your self-hosted PeerServer to use this feature.",Error("It doesn't look like you have permission to list peers IDs. "+e)}throw Error(`Error. Status:${e.status}`)}return e.json()}catch(e){throw em.error("Error retrieving list peers",e),Error("Could not get list peers from the server."+e)}}constructor(e){this._options=e}}class eF extends ej{get type(){return ek.Data}_initializeDataChannel(e){this.dataChannel=e,this.dataChannel.onopen=()=>{em.log(`DC#${this.connectionId} dc connection success`),this._open=!0,this.emit("open")},this.dataChannel.onmessage=e=>{em.log(`DC#${this.connectionId} dc onmessage:`,e.data)},this.dataChannel.onclose=()=>{em.log(`DC#${this.connectionId} dc closed for:`,this.peer),this.close()}}close(e){if(e?.flush)return void this.send({__peerData:{type:"close"}});this._negotiator&&(this._negotiator.cleanup(),this._negotiator=null),this.provider&&(this.provider._removeConnection(this),this.provider=null),this.dataChannel&&(this.dataChannel.onopen=null,this.dataChannel.onmessage=null,this.dataChannel.onclose=null,this.dataChannel=null),this.open&&(this._open=!1,super.emit("close"))}send(e,t=!1){return this.open?this._send(e,t):void this.emitError(ew.NotOpenYet,"Connection is not open. You should listen for the `open` event before sending messages.")}async handleMessage(e){let t=e.payload;switch(e.type){case eD.Answer:await this._negotiator.handleSDP(e.type,t.sdp);break;case eD.Candidate:await this._negotiator.handleCandidate(t.candidate);break;default:em.warn("Unrecognized message type:",e.type,"from peer:",this.peer)}}constructor(e,t,n){super(e,t,n),this.connectionId=this.options.connectionId||eF.ID_PREFIX+eh(),this.label=this.options.label||this.connectionId,this.reliable=!!this.options.reliable,this._negotiator=new eO(this),this._negotiator.startConnection(this.options._payload||{originator:!0,reliable:this.reliable})}}eF.ID_PREFIX="dc_",eF.MAX_BUFFERED_AMOUNT=8388608;class eN extends eF{get bufferSize(){return this._bufferSize}_initializeDataChannel(e){super._initializeDataChannel(e),this.dataChannel.binaryType="arraybuffer",this.dataChannel.addEventListener("message",e=>this._handleDataMessage(e))}_bufferedSend(e){(this._buffering||!this._trySend(e))&&(this._buffer.push(e),this._bufferSize=this._buffer.length)}_trySend(e){if(!this.open)return!1;if(this.dataChannel.bufferedAmount>eF.MAX_BUFFERED_AMOUNT)return this._buffering=!0,setTimeout(()=>{this._buffering=!1,this._tryBuffer()},50),!1;try{this.dataChannel.send(e)}catch(e){return em.error(`DC#:${this.connectionId} Error when sending:`,e),this._buffering=!0,this.close(),!1}return!0}_tryBuffer(){if(!this.open||0===this._buffer.length)return;let e=this._buffer[0];this._trySend(e)&&(this._buffer.shift(),this._bufferSize=this._buffer.length,this._tryBuffer())}close(e){if(e?.flush)return void this.send({__peerData:{type:"close"}});this._buffer=[],this._bufferSize=0,super.close()}constructor(...e){super(...e),this._buffer=[],this._bufferSize=0,this._buffering=!1}}class ez extends eN{close(e){super.close(e),this._chunkedData={}}_handleDataMessage({data:e}){let t=i(e),n=t.__peerData;if(n)return"close"===n.type?void this.close():void this._handleChunk(t);this.emit("data",t)}_handleChunk(e){let t=e.__peerData,n=this._chunkedData[t]||{data:[],count:0,total:e.total};if(n.data[e.n]=new Uint8Array(e.data),n.count++,this._chunkedData[t]=n,n.total===n.count){delete this._chunkedData[t];let e=function(e){let t=0;for(let n of e)t+=n.byteLength;let n=new Uint8Array(t),r=0;for(let t of e)n.set(t,r),r+=t.byteLength;return n}(n.data);this._handleDataMessage({data:e})}}_send(e,t){let n=s(e);return n instanceof Promise?this._send_blob(n):!t&&n.byteLength>this.chunker.chunkedMTU?void this._sendChunks(n):void this._bufferedSend(n)}async _send_blob(e){let t=await e;if(t.byteLength>this.chunker.chunkedMTU)return void this._sendChunks(t);this._bufferedSend(t)}_sendChunks(e){let t=this.chunker.chunk(e);for(let e of(em.log(`DC#${this.connectionId} Try to send ${t.length} chunks...`),t))this.send(e,!0)}constructor(e,t,r){super(e,t,r),this.chunker=new n,this.serialization=eE.Binary,this._chunkedData={}}}class e$ extends eN{_handleDataMessage({data:e}){super.emit("data",e)}_send(e,t){this._bufferedSend(e)}constructor(...e){super(...e),this.serialization=eE.None}}class eV extends eN{_handleDataMessage({data:e}){let t=this.parse(this.decoder.decode(e)),n=t.__peerData;if(n&&"close"===n.type)return void this.close();this.emit("data",t)}_send(e,t){let n=this.encoder.encode(this.stringify(e));if(n.byteLength>=ef.chunkedMTU)return void this.emitError(ew.MessageToBig,"Message too big for JSON channel");this._bufferedSend(n)}constructor(...e){super(...e),this.serialization=eE.JSON,this.encoder=new TextEncoder,this.decoder=new TextDecoder,this.stringify=JSON.stringify,this.parse=JSON.parse}}class eG extends eL{get id(){return this._id}get options(){return this._options}get open(){return this._open}get socket(){return this._socket}get connections(){let e=Object.create(null);for(let[t,n]of this._connections)e[t]=n;return e}get destroyed(){return this._destroyed}get disconnected(){return this._disconnected}_createServerConnection(){let e=new eM(this._options.secure,this._options.host,this._options.port,this._options.path,this._options.key,this._options.pingInterval);return e.on(ex.Message,e=>{this._handleMessage(e)}),e.on(ex.Error,e=>{this._abort(eR.SocketError,e)}),e.on(ex.Disconnected,()=>{this.disconnected||(this.emitError(eR.Network,"Lost connection to server."),this.disconnect())}),e.on(ex.Close,()=>{this.disconnected||this._abort(eR.SocketClosed,"Underlying socket is already closed.")}),e}_initialize(e){this._id=e,this.socket.start(e,this._options.token)}_handleMessage(e){let t=e.type,n=e.payload,r=e.src;switch(t){case eD.Open:this._lastServerId=this.id,this._open=!0,this.emit("open",this.id);break;case eD.Error:this._abort(eR.ServerError,n.msg);break;case eD.IdTaken:this._abort(eR.UnavailableID,`ID "${this.id}" is taken`);break;case eD.InvalidKey:this._abort(eR.InvalidKey,`API KEY "${this._options.key}" is invalid`);break;case eD.Leave:em.log(`Received leave message from ${r}`),this._cleanupPeer(r),this._connections.delete(r);break;case eD.Expire:this.emitError(eR.PeerUnavailable,`Could not connect to peer ${r}`);break;case eD.Offer:{let e=n.connectionId,t=this.getConnection(r,e);if(t&&(t.close(),em.warn(`Offer received for existing Connection ID:${e}`)),n.type===ek.Media){let i=new eB(r,this,{connectionId:e,_payload:n,metadata:n.metadata});t=i,this._addConnection(r,t),this.emit("call",i)}else{if(n.type!==ek.Data)return void em.warn(`Received malformed connection type:${n.type}`);let i=new this._serializers[n.serialization](r,this,{connectionId:e,_payload:n,metadata:n.metadata,label:n.label,serialization:n.serialization,reliable:n.reliable});t=i,this._addConnection(r,t),this.emit("connection",i)}for(let n of this._getMessages(e))t.handleMessage(n);break}default:{if(!n)return void em.warn(`You received a malformed message from ${r} of type ${t}`);let i=n.connectionId,s=this.getConnection(r,i);s&&s.peerConnection?s.handleMessage(e):i?this._storeMessage(i,e):em.warn("You received an unrecognized message:",e)}}}_storeMessage(e,t){this._lostMessages.has(e)||this._lostMessages.set(e,[]),this._lostMessages.get(e).push(t)}_getMessages(e){let t=this._lostMessages.get(e);return t?(this._lostMessages.delete(e),t):[]}connect(e,t={}){if(t={serialization:"default",...t},this.disconnected){em.warn("You cannot connect to a new Peer because you called .disconnect() on this Peer and ended your connection with the server. You can create a new Peer to reconnect, or call reconnect on this peer if you believe its ID to still be available."),this.emitError(eR.Disconnected,"Cannot connect to new Peer after disconnecting from server.");return}let n=new this._serializers[t.serialization](e,this,t);return this._addConnection(e,n),n}call(e,t,n={}){if(this.disconnected){em.warn("You cannot connect to a new Peer because you called .disconnect() on this Peer and ended your connection with the server. You can create a new Peer to reconnect."),this.emitError(eR.Disconnected,"Cannot connect to new Peer after disconnecting from server.");return}if(!t)return void em.error("To call a peer, you must provide a stream from your browser's `getUserMedia`.");let r=new eB(e,this,{...n,_stream:t});return this._addConnection(e,r),r}_addConnection(e,t){em.log(`add connection ${t.type}:${t.connectionId} to peerId:${e}`),this._connections.has(e)||this._connections.set(e,[]),this._connections.get(e).push(t)}_removeConnection(e){let t=this._connections.get(e.peer);if(t){let n=t.indexOf(e);-1!==n&&t.splice(n,1)}this._lostMessages.delete(e.connectionId)}getConnection(e,t){let n=this._connections.get(e);if(!n)return null;for(let e of n)if(e.connectionId===t)return e;return null}_delayedAbort(e,t){setTimeout(()=>{this._abort(e,t)},0)}_abort(e,t){em.error("Aborting!"),this.emitError(e,t),this._lastServerId?this.disconnect():this.destroy()}destroy(){this.destroyed||(em.log(`Destroy peer with ID:${this.id}`),this.disconnect(),this._cleanup(),this._destroyed=!0,this.emit("close"))}_cleanup(){for(let e of this._connections.keys())this._cleanupPeer(e),this._connections.delete(e);this.socket.removeAllListeners()}_cleanupPeer(e){let t=this._connections.get(e);if(t)for(let e of t)e.close()}disconnect(){if(this.disconnected)return;let e=this.id;em.log(`Disconnect peer with ID:${e}`),this._disconnected=!0,this._open=!1,this.socket.close(),this._lastServerId=e,this._id=null,this.emit("disconnected",e)}reconnect(){if(this.disconnected&&!this.destroyed)em.log(`Attempting reconnection to server with ID ${this._lastServerId}`),this._disconnected=!1,this._initialize(this._lastServerId);else if(this.destroyed)throw Error("This peer cannot reconnect to the server. It has already been destroyed.");else if(this.disconnected||this.open)throw Error(`Peer ${this.id} cannot reconnect because it is not disconnected from the server!`);else em.error("In a hurry? We're still trying to make the initial connection!")}listAllPeers(e=e=>{}){this._api.listAllPeers().then(t=>e(t)).catch(e=>this._abort(eR.ServerError,e))}constructor(e,t){let n;if(super(),this._serializers={raw:e$,json:eV,binary:ez,"binary-utf8":ez,default:ez},this._id=null,this._lastServerId=null,this._destroyed=!1,this._disconnected=!1,this._open=!1,this._connections=new Map,this._lostMessages=new Map,e&&e.constructor==Object?t=e:e&&(n=e.toString()),t={debug:0,host:ef.CLOUD_HOST,port:ef.CLOUD_PORT,path:"/",key:eG.DEFAULT_KEY,token:ef.randomToken(),config:ef.defaultConfig,referrerPolicy:"strict-origin-when-cross-origin",serializers:{},...t},this._options=t,this._serializers={...this._serializers,...this.options.serializers},"/"===this._options.host&&(this._options.host=window.location.hostname),this._options.path&&("/"!==this._options.path[0]&&(this._options.path="/"+this._options.path),"/"!==this._options.path[this._options.path.length-1]&&(this._options.path+="/")),void 0===this._options.secure&&this._options.host!==ef.CLOUD_HOST?this._options.secure=ef.isSecure():this._options.host==ef.CLOUD_HOST&&(this._options.secure=!0),this._options.logFunction&&em.setLogFunction(this._options.logFunction),em.logLevel=this._options.debug||0,this._api=new eU(t),this._socket=this._createServerConnection(),!ef.supports.audioVideo&&!ef.supports.data)return void this._delayedAbort(eR.BrowserIncompatible,"The current browser does not support WebRTC");if(n&&!ef.validateId(n))return void this._delayedAbort(eR.InvalidID,`ID "${n}" is invalid`);n?this._initialize(n):this._api.retrieveId().then(e=>this._initialize(e)).catch(e=>this._abort(eR.ServerError,e))}}eG.DEFAULT_KEY="peerjs",window.peerjs={Peer:eG,util:ef},window.Peer=eG})();
+//# sourceMappingURL=peerjs.min.js.map
+
+</script>
+<script>
+// How browsers in a crew talk to each other. The host's browser runs the
+// world (ghost ships, the Kraken, skulls, gold) and friends connect straight
+// to it over a WebRTC data channel. The free PeerJS service is only used to
+// find the host by its 5-letter crew code.
+(function () {
+'use strict';
+
+const PREFIX = 'sea-of-thieves-fan-';
+const PROTOCOL = 1;              // bump whenever messages change: mismatched copies refuse to mix
+const MAX_CREW = 4;
+const SERVER_TIMEOUT = 12000;    // to reach the matchmaking server
+const JOIN_TIMEOUT = 25000;      // from finding the crew to being in it
+const SILENCE = 20000;           // pings flow every 2 s, so this means they're gone
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+// STUN works on most home networks; the TURN relays carry the game when a
+// network (often school Wi-Fi) won't allow a direct connection.
+const ICE_SERVERS = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' },
+  { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turns:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' },
+];
+
+const BLOCKED = "Found the crew, but couldn't open a connection to the host's computer. Some school and work networks block this. Try a different Wi-Fi network or a phone hotspot (it only needs to work on one side).";
+const NO_SERVER = "The matchmaking server (0.peerjs.com) didn't answer. Your network may be blocking it, or it may be busy. Try again in a moment.";
+
+// ?peer=host:port points at a self-hosted PeerJS server (used by tests)
+function peerOptions() {
+  const v = new URLSearchParams(location.search).get('peer');
+  const opts = { debug: 1, config: { iceServers: ICE_SERVERS } };
+  if (v) {
+    const [host, port] = v.split(':');
+    Object.assign(opts, { host, port: Number(port) || 9000, path: '/', secure: false });
+  }
+  return opts;
+}
+
+// Browsers slow timers in background tabs, which would drop friends when
+// someone switches tabs to send the invite link. Timers in a worker keep
+// their pace.
+function workerTicker(fn, ms) {
+  try {
+    const url = URL.createObjectURL(new Blob([`setInterval(() => postMessage(0), ${ms});`], { type: 'text/javascript' }));
+    const w = new Worker(url);
+    w.onmessage = fn;
+    return () => { w.terminate(); URL.revokeObjectURL(url); };
+  } catch (e) {
+    const id = setInterval(fn, ms);
+    return () => clearInterval(id);
+  }
+}
+
+function makeCode() {
+  let s = '';
+  for (let i = 0; i < 5; i++) s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  return s;
+}
+const cleanCode = s => String(s || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5);
+const cleanName = s => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 14) || 'Pirate';
+
+class Emitter {
+  constructor() { this.handlers = new Map(); }
+  on(t, fn) {
+    if (!this.handlers.has(t)) this.handlers.set(t, new Set());
+    this.handlers.get(t).add(fn);
+  }
+  emit(msg) { for (const fn of this.handlers.get(msg.t) || []) fn(msg); }
+}
+
+// ------------------------------------------------------------------ host --
+class Host extends Emitter {
+  constructor(name) {
+    super();
+    this.isHost = true;
+    this.id = 'h';
+    this.name = cleanName(name);
+    this.guests = new Set();
+    this.nextId = 2;
+  }
+
+  status(text) { this.emit({ t: 'status', text }); }
+
+  // Resolves with the crew code once friends can find us.
+  async open() {
+    this.status('Contacting the matchmaking server...');
+    if (!window.Peer) throw new Error('The multiplayer library is missing. Reload the page and try again.');
+    for (let attempt = 0; attempt < 5 && !this.closed; attempt++) {
+      const code = makeCode();
+      try {
+        await this.listen(code);
+        this.code = code;
+        this.stopPinger = workerTicker(() => this.heartbeat(), 2000);
+        this.status('Your crew is open. Send your friends the invite link.');
+        return code;
+      } catch (e) {
+        if (e && e.type === 'unavailable-id') continue;
+        throw new Error(e && e.type === 'timeout' ? NO_SERVER : `Couldn't reach the matchmaking server (${(e && e.type) || 'error'}). Try again, or sail solo.`);
+      }
+    }
+    throw new Error("Couldn't get a crew code. Try again in a moment.");
+  }
+
+  listen(code) {
+    return new Promise((resolve, reject) => {
+      const peer = new window.Peer(PREFIX + code, peerOptions());
+      let open = false;
+      const timer = setTimeout(() => { if (!open) { peer.destroy(); reject({ type: 'timeout' }); } }, SERVER_TIMEOUT);
+      peer.on('open', () => { open = true; clearTimeout(timer); this.peer = peer; resolve(); });
+      peer.on('error', (e) => {
+        if (!open) { clearTimeout(timer); peer.destroy(); reject(e); return; }
+        console.warn('peer error', e.type);
+      });
+      // keep the code registered so more friends can still find us
+      peer.on('disconnected', () => { if (!this.closed && !peer.destroyed) peer.reconnect(); });
+      peer.on('connection', (conn) => this.accept(conn));
+    });
+  }
+
+  usedColors() { const s = new Set([0]); for (const g of this.guests) if (g.id) s.add(g.color); return s; }
+
+  accept(conn) {
+    const g = { conn, id: null, color: 0, last: performance.now() };
+    this.guests.add(g);
+    this.status('Someone is connecting...');
+    const drop = () => {
+      if (!this.guests.has(g)) return;
+      this.guests.delete(g);
+      if (g.id) this.emit({ t: 'leave', id: g.id });
+      else this.status("A friend found your crew but couldn't connect. One of your networks is blocking the connection; a phone hotspot on either side usually fixes it.");
+      try { conn.close(); } catch (e) { /* already closed */ }
+    };
+    g.drop = drop;
+    conn.on('data', (msg) => {
+      g.last = performance.now();
+      if (!msg || typeof msg !== 'object' || msg.t === 'ping') return;
+      if (g.id == null) {
+        if (msg.t !== 'hello') return;
+        if (msg.v !== PROTOCOL) {
+          conn.send({ t: 'refused', text: "Your copy of the game is a different version from the host's. Both of you: refresh the page (Ctrl+Shift+R) and try again." });
+          setTimeout(drop, 1000);
+          return;
+        }
+        const used = this.usedColors();
+        const color = [1, 2, 3].find(c => !used.has(c));
+        if (color === undefined) {
+          conn.send({ t: 'refused', text: `This crew is full. A crew holds ${MAX_CREW} pirates.` });
+          setTimeout(drop, 1000);
+          return;
+        }
+        g.id = 'p' + this.nextId++;
+        g.color = color;
+        conn.send({ t: 'welcome', id: g.id, color });
+        this.status('A friend joined the crew.');
+        this.emit({ t: 'join', id: g.id, name: cleanName(msg.name), color });
+        return;
+      }
+      msg.from = g.id;
+      this.emit(msg);
+    });
+    conn.on('close', drop);
+    conn.on('error', drop);
+  }
+
+  send(id, msg) {
+    for (const g of this.guests) if (g.id === id && g.conn.open) g.conn.send(msg);
+  }
+
+  broadcast(msg, except) {
+    for (const g of this.guests) if (g.id && g.id !== except && g.conn.open) g.conn.send(msg);
+  }
+
+  heartbeat() {
+    const now = performance.now();
+    for (const g of [...this.guests]) {
+      if (now - g.last > (g.id ? SILENCE : JOIN_TIMEOUT)) g.drop();
+      else if (g.conn.open) g.conn.send({ t: 'ping' });
+    }
+  }
+
+  close() {
+    this.closed = true;
+    if (this.stopPinger) this.stopPinger();
+    for (const g of this.guests) try { g.conn.close(); } catch (e) { /* gone */ }
+    if (this.peer) this.peer.destroy();
+  }
+}
+
+// ----------------------------------------------------------------- guest --
+class Guest extends Emitter {
+  constructor(name, code) {
+    super();
+    this.isHost = false;
+    this.name = cleanName(name);
+    this.code = cleanCode(code);
+  }
+
+  status(text) { this.emit({ t: 'status', text }); }
+
+  // Resolves with { id, color } once we're in the host's crew. Each stage
+  // reports progress and fails with a reason, so a blocked network doesn't
+  // look like a hang.
+  connect() {
+    return new Promise((resolve, reject) => {
+      let stage = 'server';
+      let timer = null;
+      const fail = (text) => {
+        if (this.closed) return;
+        clearTimeout(timer);
+        this.close();
+        reject(new Error(text));
+      };
+      const wait = (ms, text) => { clearTimeout(timer); timer = setTimeout(() => fail(text), ms); };
+      if (!window.Peer) { fail('The multiplayer library is missing. Reload the page and try again.'); return; }
+      this.status('Contacting the matchmaking server...');
+      wait(SERVER_TIMEOUT, NO_SERVER);
+      const peer = (this.peer = new window.Peer(peerOptions()));
+      peer.on('error', (e) => {
+        if (e.type === 'peer-unavailable') fail(`There's no crew with code ${this.code}. Check the code. The host needs to keep the game open.`);
+        else if (stage !== 'in') fail(stage === 'server' ? `Couldn't reach the matchmaking server (${e.type}).` : `Couldn't connect to crew ${this.code} (${e.type}).`);
+      });
+      peer.on('open', () => {
+        stage = 'host';
+        this.status(`Found the matchmaking server. Looking for crew ${this.code}...`);
+        wait(JOIN_TIMEOUT, BLOCKED);
+        const conn = (this.conn = peer.connect(PREFIX + this.code, { reliable: true, serialization: 'json' }));
+        conn.on('iceStateChanged', (st) => {
+          if (st === 'checking') this.status("Crew found. Opening a connection to the host's computer...");
+          if (st === 'failed' && stage !== 'in') fail(BLOCKED);
+        });
+        conn.on('error', (e) => { if (stage !== 'in') fail(e && e.type === 'negotiation-failed' ? BLOCKED : `Couldn't connect to crew ${this.code} (${(e && e.type) || 'error'}).`); });
+        conn.on('open', () => {
+          stage = 'hello';
+          this.status('Connected. Joining the crew...');
+          this.last = performance.now();
+          conn.send({ t: 'hello', name: this.name, v: PROTOCOL });
+          this.stopPinger = workerTicker(() => {
+            if (performance.now() - this.last > SILENCE) this.lost();
+            else if (conn.open) conn.send({ t: 'ping' });
+          }, 2000);
+        });
+        conn.on('data', (msg) => {
+          this.last = performance.now();
+          if (!msg || typeof msg !== 'object' || msg.t === 'ping') return;
+          if (msg.t === 'welcome') { this.id = msg.id; stage = 'in'; clearTimeout(timer); resolve({ id: msg.id, color: msg.color }); return; }
+          if (msg.t === 'refused') { fail(msg.text); return; }
+          if (stage === 'in') this.emit(msg);
+        });
+        conn.on('close', () => { if (stage === 'in') this.lost(); else fail(`The host closed the connection to crew ${this.code}.`); });
+      });
+    });
+  }
+
+  lost() {
+    if (this.closed) return;
+    this.close();
+    this.emit({ t: 'closed', text: 'Lost the connection to the host. They may have closed the game.' });
+  }
+
+  send(msg) {
+    if (this.conn && this.conn.open) this.conn.send(msg);
+  }
+
+  close() {
+    this.closed = true;
+    if (this.stopPinger) this.stopPinger();
+    try { if (this.conn) this.conn.close(); } catch (e) { /* gone */ }
+    if (this.peer) this.peer.destroy();
+  }
+}
+
+window.SeaNet = { Host, Guest, MAX_CREW, cleanCode, cleanName, workerTicker };
+})();
+
+</script>
+<script>
+// Sea of Thieves Fan Game: the world, the ships and the crew.
+// Solo, this tab runs everything. In a crew, the host's tab runs the world
+// (ghost ships, the Kraken, skulls, barrels and the crew's gold) and every
+// player steers their own ship and decides when their own hull is hit.
 (function () {
 'use strict';
 const $ = id => document.getElementById(id);
-const rand = (a, b) => a + Math.random() * (b - a);
+let rng = Math.random;
+const rand = (a, b) => a + rng() * (b - a);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const lerp = (a, b, t) => a + (b - a) * t;
 const TAU = Math.PI * 2;
 const wrapA = a => { a = (a + Math.PI) % TAU; if (a < 0) a += TAU; return a - Math.PI; };
+const r2 = v => Math.round(v * 100) / 100;
+const r3 = v => Math.round(v * 1000) / 1000;
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const FLASHK = REDUCED ? 0.35 : 1;
+// every crewmate builds the same islands from the voyage's seed
+function seeded(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
 
-function fail(msg) { const e = $('err'); e.hidden = false; e.textContent = msg; $('startBtn').disabled = true; }
+function fail(msg) { const e = $('err'); e.hidden = false; e.textContent = msg; ['startBtn', 'hostBtn', 'joinOpenBtn'].forEach(id => { $(id).disabled = true; }); }
 if (!window.THREE) { fail("The 3D engine didn't load. Keep the js folder next to index.html, or open dist/game.html instead."); return; }
 
 let BEST = 0;
@@ -435,6 +793,15 @@ const PM = {
   flag: new THREE.MeshBasicMaterial({ color: 0x060606, side: THREE.DoubleSide }),
   glow: new THREE.MeshBasicMaterial({ color: 0xffb060 }),
 };
+// each crewmate's sails are tinted their colour, so friends are easy to spot
+const CREW_HEX = ['#e4dbc4', '#6fb7ff', '#c58bff', '#ff8fc8'];
+const CREW_X = [0, 14, -14, 28];
+const sailTint = c => new THREE.Color(0xffffff).lerp(new THREE.Color(CREW_HEX[c] || CREW_HEX[0]), c ? 0.75 : 0);
+function crewMats(c) {
+  const m = Object.assign({}, PM, { sail: PM.sail.clone(), skullSail: PM.skullSail.clone() });
+  m.sail.color.copy(sailTint(c)); m.skullSail.color.copy(sailTint(c));
+  return m;
+}
 function ghostMats() {
   const base = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, opacity: 0 };
   const mk = (M, o, b) => { const m = new M(Object.assign({}, base, o)); m.userData.base = b; return m; };
@@ -487,6 +854,15 @@ function floatObj(grp, x, z, h, t, sink) {
   const hl = waveH(x + lx * 1.8, z + lz * 1.8, t), hr = waveH(x - lx * 1.8, z - lz * 1.8, t);
   grp.position.set(x, (hf + hb + hl + hr) / 4 - sink, z);
   grp.rotation.set(Math.atan2(hb - hf, 8) * 0.8, h, Math.atan2(hl - hr, 3.6) * 0.6);
+}
+function nameLabel(text, css) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 96;
+  const g = c.getContext('2d');
+  g.font = '56px "Pirata One", "IM Fell English", Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 8; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(text, 256, 50); g.fillStyle = css; g.fillText(text, 256, 50);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false, depthWrite: false, fog: false }));
+  s.scale.set(10, 1.9, 1); s.renderOrder = 10;
+  return s;
 }
 
 // ---------- skulls, trees, islands ----------
@@ -556,18 +932,21 @@ function buildIsland(I) {
   I.col = r * 1.05 + (skull ? 4.5 : 4);
   g.position.set(I.x, 0, I.z); scene.add(g); I.grp = g;
 }
-function placeIslands() {
-  const spots = [{ x: rand(-25, 25), z: rand(92, 110), r: rand(12, 15), skull: true }];
-  let tries = 0;
-  while (spots.filter(s => s.skull).length < 5 && tries++ < 800) {
-    const a = rand(0, TAU), d = rand(110, 270), x = Math.sin(a) * d, z = Math.cos(a) * d;
-    if (spots.every(s => Math.hypot(s.x - x, s.z - z) > 85)) spots.push({ x, z, r: rand(11, 17), skull: true });
-  }
-  while (spots.length < 10 && tries++ < 1600) {
-    const a = rand(0, TAU), d = rand(45, 290), x = Math.sin(a) * d, z = Math.cos(a) * d;
-    if (spots.every(s => Math.hypot(s.x - x, s.z - z) > s.r + 40)) spots.push({ x, z, r: rand(4, 7), skull: false });
-  }
-  spots.forEach(s => { buildIsland(s); islands.push(s); });
+function placeIslands(seed) {
+  rng = seeded(seed);
+  try {
+    const spots = [{ x: rand(-25, 25), z: rand(92, 110), r: rand(12, 15), skull: true }];
+    let tries = 0;
+    while (spots.filter(s => s.skull).length < 5 && tries++ < 800) {
+      const a = rand(0, TAU), d = rand(110, 270), x = Math.sin(a) * d, z = Math.cos(a) * d;
+      if (spots.every(s => Math.hypot(s.x - x, s.z - z) > 85)) spots.push({ x, z, r: rand(11, 17), skull: true });
+    }
+    while (spots.length < 10 && tries++ < 1600) {
+      const a = rand(0, TAU), d = rand(45, 290), x = Math.sin(a) * d, z = Math.cos(a) * d;
+      if (spots.every(s => Math.hypot(s.x - x, s.z - z) > s.r + 40)) spots.push({ x, z, r: rand(4, 7), skull: false });
+    }
+    spots.forEach((s, i) => { s.idx = i; buildIsland(s); islands.push(s); });
+  } finally { rng = Math.random; }
 }
 
 // ---------- sky, lightning, the thing in the storm ----------
@@ -587,7 +966,7 @@ function makeBolt(x, z) {
   boltGeo.attributes.position.needsUpdate = true;
 }
 
-// ---------- the player's ship ----------
+// ---------- your ship ----------
 const player = { x: 0, z: 0, h: 0, speed: 0, sink: 0 };
 player.grp = buildShip(PM, false); scene.add(player.grp);
 const lanternLight = new THREE.PointLight(0xff9440, 1.3, 16, 2); lanternLight.position.set(0, 3.6, -4.2); player.grp.add(lanternLight);
@@ -608,7 +987,7 @@ const tentMat = new THREE.MeshPhongMaterial({ color: 0x40162f, emissive: 0x14040
 const barrelGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.1, 8); barrelGeo.rotateZ(Math.PI / 2);
 const barrelMat = new THREE.MeshLambertMaterial({ color: 0x4a3524 });
 const ghosts = [], balls = [], loot = [], eyes = [];
-const kraken = { active: false, tentacles: [] };
+const kraken = { active: false, tg: null, tentacles: [], noReward: false, removed: new Set() };
 
 // ---------- sound: everything is synthesized ----------
 const Snd = {
@@ -642,7 +1021,7 @@ const Snd = {
   },
   env(g, t0, a, peak, d) { g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t0 + a); g.gain.exponentialRampToValueAtTime(0.0001, t0 + a + d); },
   ambience() {
-    const ac = this.ac, t = this.now();
+    const t = this.now();
     const sea = this.src(this.brown, true), sl = this.filt('lowpass', 380), sg = this.gain(0.42);
     const lfo = this.osc('sine', 0.11), lg = this.gain(0.2); lfo.connect(lg); lg.connect(sg.gain);
     sea.connect(sl); sl.connect(sg); this.out(sg, 0, 0.05); sea.start(t); lfo.start(t);
@@ -756,19 +1135,28 @@ const Snd = {
 };
 
 // ---------- game state ----------
-const fresh = () => ({ mode: 'title', gold: 0, skulls: 0, total: 5, holes: 0, water: 0, sail: 0.35, rudder: 0, repairP: 0, haulP: 0, coolL: 0, coolR: 0, ghostT: 32, krakenT: rand(100, 140), lootT: 4, eyesT: 10, creakT: 4, whisperT: 28, moanT: 14, beatT: 0, groundCD: 0, sinkT: 0, dawn: 0, playTime: 0, knockT: 0, bailT: 0, endT: 0, moodT: 0, lightT: 5 });
+const fresh = () => ({ mode: 'title', live: false, won: false, seed: 0, gold: 0, skulls: 0, total: 5, holes: 0, water: 0, sail: 0.35, rudder: 0, repairP: 0, haulP: 0, coolL: 0, coolR: 0, ghostT: 32, krakenT: rand(100, 140), lootT: 4, eyesT: 10, creakT: 4, whisperT: 28, moanT: 14, beatT: 0, groundCD: 0, sinkT: 0, ferryT: 0, dawn: 0, playTime: 0, knockT: 0, bailT: 0, endT: 0, moodT: 0, lightT: 5 });
 let S = fresh();
 let T = 0, flash = 0, flashT = 0, flashQ = [], thunderT = -1, thunderV = 0, thunderPan = 0, wraithOn = false, hurt = 0, krakenMix = 0, camYaw = 0;
 const keys = Object.create(null);
 let touchMode = false;
 
+// the crew: NET is null when sailing solo
+let NET = null, AUTH = true, myId = 'h', myColor = 0, myName = 'Pirate', pvp = false, menuOpen = false, crewCode = '';
+const crewInfo = new Map();   // id -> { name, color }, everyone including you
+const remotes = new Map();    // id -> a crewmate's ship as this tab sees it
+let ghostSeq = 1, lootSeq = 1;
+const lootGrabbed = new Set();
+const crewName = id => (crewInfo.get(id) || {}).name || 'A crewmate';
+
 const panFor = (x, z) => clamp(-Math.sin(wrapA(Math.atan2(x - camera.position.x, z - camera.position.z) - camYaw)), -1, 1);
 const distTo = (x, z) => Math.hypot(x - player.x, z - player.z);
 const volFor = (x, z, near) => clamp(1.2 - distTo(x, z) / (near || 60), 0.15, 1);
+const sailing = () => S.mode === 'play' || S.mode === 'won';
 
 let bannerT = 0, toastT = 0;
 function banner(title, sub, dur, red) { $('bTitle').textContent = title; $('bSub').textContent = sub || ''; $('banner').classList.toggle('red', !!red); $('banner').classList.add('show'); bannerT = dur || 3; }
-function toast(txt) { const t = $('toast'); t.textContent = txt; t.classList.add('show'); toastT = 1.6; }
+function toast(txt) { const t = $('toast'); t.textContent = txt; t.classList.add('show'); toastT = 1.8; }
 let lastPrompt = null;
 function setPrompt(txt, prog) {
   const p = $('prompt');
@@ -778,6 +1166,74 @@ function setPrompt(txt, prog) {
 }
 const holdKey = (k, label) => touchMode ? `Hold ${label}` : `Hold ${k}`;
 
+// ---------- the crew's ships ----------
+function addRemote(id) {
+  const info = crewInfo.get(id) || { name: 'Pirate', color: 1 };
+  const mats = crewMats(info.color);
+  const grp = buildShip(mats, false);
+  const glow = glowSprite(0xffa04a, 3.4, 0.85); glow.position.set(0, 2.75, -4.85); grp.add(glow);
+  const label = nameLabel(info.name, CREW_HEX[info.color] || CREW_HEX[0]); label.position.set(0, 14.5, 0); grp.add(label);
+  grp.visible = false; scene.add(grp);
+  const R = { id, grp, mats, label, x: 0, z: 0, h: 0, tx: 0, tz: 0, th: 0, sp: 0, sl: 0.35, rd: 0, ho: 0, wa: 0, st: 'sail', sink: 0, seen: false, raw: null };
+  remotes.set(id, R);
+  return R;
+}
+function removeRemote(id) {
+  const R = remotes.get(id); if (!R) return;
+  scene.remove(R.grp); R.mats.sail.dispose(); R.mats.skullSail.dispose(); R.label.material.map.dispose(); R.label.material.dispose();
+  remotes.delete(id);
+}
+function applyShip(s) {
+  if (!s || s.id === myId || !crewInfo.has(s.id)) return;
+  const R = remotes.get(s.id) || addRemote(s.id);
+  R.raw = { id: s.id, x: s.x, z: s.z, h: s.h, sp: s.sp, sl: s.sl, rd: s.rd, ho: s.ho, wa: s.wa, st: s.st };
+  R.tx = s.x; R.tz = s.z; R.th = s.h; R.sp = s.sp; R.sl = s.sl; R.rd = s.rd; R.ho = s.ho; R.wa = s.wa;
+  if (s.st === 'sail') R.sink = 0;
+  R.st = s.st;
+  if (!R.seen || Math.hypot(R.x - s.x, R.z - s.z) > 30) { R.x = s.x; R.z = s.z; R.h = s.h; R.seen = true; }
+}
+function stepRemotes(dt) {
+  const k = 1 - Math.pow(0.02, dt);
+  for (const R of remotes.values()) {
+    R.grp.visible = R.seen && R.st !== 'ferry' && S.mode !== 'title';
+    if (!R.seen) continue;
+    R.tx += Math.sin(R.th) * R.sp * dt; R.tz += Math.cos(R.th) * R.sp * dt;
+    R.x += (R.tx - R.x) * k; R.z += (R.tz - R.z) * k; R.h += wrapA(R.th - R.h) * k;
+    if (R.st === 'sinking') R.sink += dt * 0.9;
+    floatObj(R.grp, R.x, R.z, R.h, T, R.sink);
+    const ud = R.grp.userData;
+    for (const s of ud.sails) s.scale.y += (0.12 + 0.88 * R.sl - s.scale.y) * Math.min(1, dt * 3);
+    ud.flag.rotation.y = -Math.PI / 2 + Math.sin(T * 3.1 + R.x) * 0.28;
+    ud.wheel.rotation.z = -R.rd * 2.2;
+  }
+}
+function myState() {
+  const st = S.mode === 'sinking' ? 'sinking' : S.mode === 'ferry' ? 'ferry' : 'sail';
+  return { id: myId, x: r2(player.x), z: r2(player.z), h: r3(player.h), sp: r2(player.speed), sl: r2(S.sail), rd: r2(S.rudder), ho: S.holes, wa: Math.round(S.water), st };
+}
+// every ship still afloat: yours (if you're sailing) and your crewmates'
+function crewShips() {
+  const out = [];
+  if (sailing()) out.push({ id: myId, x: player.x, z: player.z, h: player.h, sp: player.speed });
+  for (const R of remotes.values()) if (R.seen && R.st === 'sail') out.push({ id: R.id, x: R.x, z: R.z, h: R.h, sp: R.sp });
+  return out;
+}
+function shipPose(id) {
+  if (id === myId) return { x: player.x, z: player.z, h: player.h, alive: sailing() };
+  const R = remotes.get(id);
+  return R && R.seen ? { x: R.x, z: R.z, h: R.h, alive: R.st === 'sail' } : null;
+}
+function safeSpot(x, z, h) {
+  for (const I of islands) {
+    const d = Math.hypot(x - I.x, z - I.z) || 0.01;
+    if (d < I.col + 3) { x = I.x + (x - I.x) / d * (I.col + 3); z = I.z + (z - I.z) / d * (I.col + 3); }
+  }
+  return { x: r2(x), z: r2(z), h: r3(h) };
+}
+// a spot behind and beside a ship that's still sailing
+function spotNear(s) { return safeSpot(s.x - Math.sin(s.h) * 30 + Math.cos(s.h) * 12, s.z - Math.cos(s.h) * 30 - Math.sin(s.h) * 12, s.h); }
+
+// ---------- cannons ----------
 function aim(ox, oz, tx, tz, tvx, tvz, V) {
   let px = tx, pz = tz, el = 0;
   for (let k = 0; k < 3; k++) {
@@ -787,22 +1243,40 @@ function aim(ox, oz, tx, tz, tvx, tvz, V) {
   }
   return { yaw: Math.atan2(px - ox, pz - oz), el };
 }
-function spawnBall(p, a, V, owner) {
+const ballOf = (p, a, V) => { const ce = Math.cos(a.el); return [r2(p.x), r2(p.y), r2(p.z), r2(Math.sin(a.yaw) * ce * V), r2(Math.sin(a.el) * V), r2(Math.cos(a.yaw) * ce * V)]; };
+function spawnBall(a, owner) {
   let mesh;
   if (owner === 'ghost') { mesh = new THREE.Sprite(ghostShotMat); mesh.scale.set(1.8, 1.8, 1); }
   else { mesh = new THREE.Mesh(ballGeo, ballMat); const e = new THREE.Sprite(emberMat); e.scale.set(1.1, 1.1, 1); mesh.add(e); }
-  mesh.position.copy(p); scene.add(mesh);
-  const ce = Math.cos(a.el);
-  balls.push({ mesh, vx: Math.sin(a.yaw) * ce * V, vy: Math.sin(a.el) * V, vz: Math.cos(a.yaw) * ce * V, owner, life: 0 });
+  mesh.position.set(a[0], a[1], a[2]); scene.add(mesh);
+  balls.push({ mesh, vx: a[3], vy: a[4], vz: a[5], owner, life: 0 });
+}
+// a volley: a list of [x, y, z, vx, vy, vz] cannonballs fired together
+function spawnVolley(by, b) {
+  if (!b || !b.length) return;
+  const ghost = by === 'ghost';
+  for (const a of b) {
+    spawnBall(a, by);
+    emit(a[0], a[1], a[2], ghost ? 10 : 12, Object.assign({}, ghost ? FX.ghost : FX.fire, { dx: a[3] * 0.17, dz: a[5] * 0.17 }));
+    if (!ghost) emit(a[0], a[1], a[2], 6, Object.assign({}, FX.smoke, { dx: a[3] * 0.06, dz: a[5] * 0.06 }));
+  }
+  const f = b[0];
+  if (by !== myId) Snd.cannon(panFor(f[0], f[2]), clamp(1.2 - distTo(f[0], f[2]) / 60, 0.2, 0.9), ghost ? 0.7 : 0.35);
+}
+function sendVolley(b) {
+  if (!NET) return;
+  if (NET.isHost) NET.broadcast({ t: 'vol', by: myId, b });
+  else NET.send({ t: 'vol', b });
 }
 function targets() {
   const out = [];
   for (const G of ghosts) if (!G.sinking && G.fade > 0.4) out.push({ x: G.x, z: G.z, vx: Math.sin(G.h) * G.speed, vz: Math.cos(G.h) * G.speed });
   if (kraken.active) for (const Tn of kraken.tentacles) if (Tn.alive && Tn.rise > 0.6) out.push({ x: Tn.pts[5].x, z: Tn.pts[5].z, vx: 0, vz: 0 });
+  if (pvp) for (const R of remotes.values()) if (R.seen && R.st === 'sail') out.push({ x: R.x, z: R.z, vx: Math.sin(R.h) * R.sp, vz: Math.cos(R.h) * R.sp });
   return out;
 }
 function fire(side, lockMin) {
-  if (S.mode !== 'play') return;
+  if (S.mode !== 'play' || menuOpen) return;
   if (side > 0 ? S.coolL > 0 : S.coolR > 0) return;
   if (side > 0) S.coolL = COOL; else S.coolR = COOL;
   const lx = Math.cos(player.h) * side, lz = -Math.sin(player.h) * side;
@@ -814,20 +1288,21 @@ function fire(side, lockMin) {
     const score = d * (2 - c); if (score < bestScore) { best = t; bestScore = score; }
   }
   player.grp.updateMatrixWorld();
+  const b = [];
   for (const c of player.grp.userData.cannons) {
     if (c.side !== side) continue;
     const wp = c.local.clone().applyMatrix4(player.grp.matrixWorld);
     const a = best ? aim(wp.x, wp.z, best.x, best.z, best.vx, best.vz, BALL_V) : { yaw: Math.atan2(lx, lz), el: 0.16 };
     a.yaw += rand(-0.025, 0.025); a.el += rand(-0.01, 0.01);
-    spawnBall(wp, a, BALL_V, 'player');
-    emit(wp.x, wp.y, wp.z, 12, Object.assign({}, FX.fire, { dx: lx * 6, dz: lz * 6 }));
-    emit(wp.x, wp.y, wp.z, 6, Object.assign({}, FX.smoke, { dx: lx * 2, dz: lz * 2 }));
+    b.push(ballOf(wp, a, BALL_V));
   }
+  spawnVolley(myId, b);
+  sendVolley(b);
   Snd.cannon(-side * 0.55, 0.9);
   cam.shake = Math.max(cam.shake, 0.35);
 }
 function fireAuto() {
-  if (S.mode !== 'play') return;
+  if (S.mode !== 'play' || menuOpen) return;
   let best = null, bd = 1e9;
   for (const t of targets()) { const d = distTo(t.x, t.z); if (d < bd) { bd = d; best = t; } }
   if (!best || bd > 75) { fire(1); fire(-1); return; }
@@ -846,115 +1321,175 @@ function damage(n) {
   const p = player.grp.position; emit(p.x, p.y + 1.2, p.z, 26, FX.splinter);
 }
 
+// ---------- one-off happenings, shared with the crew ----------
+// The host (or a solo tab) decides these and every tab plays them.
+function fireEvent(ev) {
+  if (NET && NET.isHost) NET.broadcast(Object.assign({ t: 'ev' }, ev));
+  onEvent(ev);
+}
+const LINES = ['The dead want it back.', 'The fog is getting thicker.', 'Something enormous stirs below.', 'One more. They know exactly where you are.'];
+function onEvent(m) {
+  switch (m.e) {
+    case 'ghost':
+      Snd.bell(panFor(m.x, m.z), 0.35 * volFor(m.x, m.z, 140));
+      banner('A ghost ship tolls its bell', 'Sink it with your cannons, or outrun it', 3.4);
+      break;
+    case 'ghostSunk':
+      banner('Ghost ship destroyed', m.by === myId || !NET ? '+50 gold' : `${crewName(m.by)} sank it. +50 gold`, 2.4);
+      Snd.wail(panFor(m.x, m.z), 0.3 * volFor(m.x, m.z, 100));
+      emit(m.x, 3, m.z, 60, Object.assign({}, FX.ghost, { spd: 5, up: 8, spread: 3 }));
+      break;
+    case 'kraken':
+      if (m.tg === myId) { Snd.roar(0.7); cam.shake = 1.4; banner('The Kraken', 'Shoot the tentacles before they smash the hull', 4.2, true); }
+      else { Snd.roar(0.3); banner(`The Kraken has ${crewName(m.tg)}`, 'Sail over and help shoot the tentacles off', 4.2, true); }
+      break;
+    case 'cut': toast('Tentacle severed'); Snd.roar(0.25); break;
+    case 'slam': {
+      const Tn = kraken.tentacles.find(t => t.n === m.n);
+      if (Tn) { const p = Tn.pts[TSEG - 1]; emit(p.x, p.y, p.z, 24, FX.splinter); emit(p.x, p.y, p.z, 18, FX.splash); Snd.splash(panFor(p.x, p.z), 0.4 * volFor(p.x, p.z)); }
+      if (m.tg === myId) { damage(1); cam.shake = 1; Snd.thump(0.6); }
+      break;
+    }
+    case 'krakenEnd':
+      if (m.won) banner('The Kraken sinks back into the deep', '+150 gold', 3.4);
+      break;
+    case 'skull':
+      if (takeSkull(m.i)) {
+        const I = islands[m.i];
+        emit(I.sx, I.sy, I.sz, 60, Object.assign({}, FX.ghost, { spd: 4, up: 5, life: 1.6 }));
+        Snd.chime(); Snd.laugh(panFor(I.sx, I.sz), 0.22);
+        if (S.skulls < S.total) {
+          const line = LINES[S.skulls - 1] || '';
+          banner(`Cursed skull ${S.skulls} of ${S.total}`, m.by === myId || !NET ? line : `${crewName(m.by)} hauled it aboard. ${line}`, 3.6);
+        }
+      }
+      break;
+    case 'win': win(); break;
+  }
+}
+
 // ---------- ghost ships ----------
-function spawnGhost() {
+function makeGhost(id, x, z, h) {
   const mats = ghostMats(), grp = buildShip(mats, true);
   const aura = glowSprite(0x22ff99, 1, 0); aura.scale.set(24, 16, 1); aura.position.y = 4; aura.material.userData.base = 0.2; grp.add(aura); mats.list.push(aura.material);
   const lamp = glowSprite(0x7affc8, 4, 0); lamp.position.set(0, 2.75, -4.85); lamp.material.userData.base = 0.9; grp.add(lamp); mats.list.push(lamp.material);
   scene.add(grp);
-  const a = player.h + rand(-1.3, 1.3) + (Math.random() < 0.35 ? Math.PI : 0), d = rand(68, 82);
-  const G = { grp, mats, x: player.x + Math.sin(a) * d, z: player.z + Math.cos(a) * d, h: 0, speed: 8, hp: 3 + Math.ceil(S.skulls / 2), fade: 0, sinking: false, sink: 0, cool: rand(5, 8), side: Math.random() < 0.5 ? 1 : -1, flash: 0 };
-  G.h = Math.atan2(player.x - G.x, player.z - G.z);
-  floatObj(grp, G.x, G.z, G.h, T, 0);
+  const G = { id, grp, mats, x, z, h, tx: x, tz: z, th: h, speed: 8, hp: 3 + Math.ceil(S.skulls / 2) + (crewInfo.size > 2 ? 1 : 0), fade: 0, tfade: 0, sinking: false, dismissed: false, gone: false, sink: 0, cool: rand(5, 8), side: Math.random() < 0.5 ? 1 : -1, flash: 0 };
+  floatObj(grp, x, z, h, T, 0);
   ghosts.push(G);
-  Snd.bell(panFor(G.x, G.z), 0.35);
-  banner('A ghost ship tolls its bell', 'Sink it with your cannons, or outrun it', 3.4);
+  return G;
+}
+function spawnGhost(near) {
+  const a = near.h + rand(-1.3, 1.3) + (Math.random() < 0.35 ? Math.PI : 0), d = rand(68, 82);
+  const x = near.x + Math.sin(a) * d, z = near.z + Math.cos(a) * d;
+  const G = makeGhost(ghostSeq++, x, z, Math.atan2(near.x - x, near.z - z));
+  fireEvent({ e: 'ghost', id: G.id, x: r2(x), z: r2(z) });
 }
 function removeGhost(G) { scene.remove(G.grp); G.mats.list.forEach(m => m.dispose()); }
-function ghostVolley(G, side, d) {
+function ghostVolley(G, side, tgt, d) {
   G.grp.updateMatrixWorld();
-  const pvx = Math.sin(player.h) * player.speed, pvz = Math.cos(player.h) * player.speed;
+  const pvx = Math.sin(tgt.h) * tgt.sp, pvz = Math.cos(tgt.h) * tgt.sp;
   const err = Math.max(1.5, 5 - S.skulls * 0.6), max = 2 + (S.skulls >= 3 ? 1 : 0);
-  let n = 0;
+  const b = [];
   for (const c of G.grp.userData.cannons) {
-    if (c.side !== side || n >= max) continue; n++;
+    if (c.side !== side || b.length >= max) continue;
     const wp = c.local.clone().applyMatrix4(G.grp.matrixWorld);
-    spawnBall(wp, aim(wp.x, wp.z, player.x + rand(-err, err), player.z + rand(-err, err), pvx, pvz, GHOST_V), GHOST_V, 'ghost');
-    emit(wp.x, wp.y, wp.z, 10, FX.ghost);
+    b.push(ballOf(wp, aim(wp.x, wp.z, tgt.x + rand(-err, err), tgt.z + rand(-err, err), pvx, pvz, GHOST_V), GHOST_V));
   }
-  Snd.cannon(panFor(G.x, G.z), clamp(1.2 - d / 60, 0.3, 0.9), 0.7);
+  spawnVolley('ghost', b);
+  if (NET) NET.broadcast({ t: 'vol', by: 'ghost', b });
 }
-function hitGhost(G, p) {
-  G.hp--; G.flash = 1;
+function hitGhost(G, p, by) {
+  G.flash = 1;
   emit(p.x, p.y, p.z, 20, FX.ghost); emit(p.x, p.y, p.z, 10, FX.splinter);
   Snd.crack(panFor(p.x, p.z), volFor(p.x, p.z) * 0.8);
+  if (!AUTH) return;
+  G.hp--;
   if (G.hp <= 0) {
     G.sinking = true; S.gold += 50;
-    banner('Ghost ship destroyed', '+50 gold', 2.4);
-    Snd.wail(panFor(G.x, G.z), 0.3);
-    emit(G.x, G.grp.position.y + 3, G.z, 60, Object.assign({}, FX.ghost, { spd: 5, up: 8, spread: 3 }));
+    fireEvent({ e: 'ghostSunk', id: G.id, by, x: r2(G.x), z: r2(G.z) });
   }
 }
 function stepGhosts(dt) {
-  const play = S.mode === 'play';
+  const ships = AUTH ? crewShips() : null;
   for (let i = ghosts.length - 1; i >= 0; i--) {
     const G = ghosts[i];
-    const dx = player.x - G.x, dz = player.z - G.z, d = Math.hypot(dx, dz) || 0.01;
-    if (G.sinking) {
-      G.fade -= dt * 0.33; G.sink += dt * 1.1; G.speed *= Math.pow(0.3, dt);
-      if (Math.random() < dt * 25) emit(G.x + rand(-2, 2), G.grp.position.y + rand(0, 6), G.z + rand(-2, 2), 1, { col: [0.3, 1, 0.65], spd: 0.6, up: 1.5, life: 1.6, grav: -1.2 });
-      if (G.fade <= 0) { removeGhost(G); ghosts.splice(i, 1); continue; }
+    if (AUTH) {
+      if (G.sinking) {
+        G.fade -= dt * 0.33; G.sink += dt * 1.1; G.speed *= Math.pow(0.3, dt);
+        if (G.fade <= 0) { removeGhost(G); ghosts.splice(i, 1); continue; }
+      } else {
+        G.fade = Math.min(1, G.fade + dt * 0.3);
+        let tgt = null, d = Infinity;
+        for (const s of ships) { const dd = Math.hypot(s.x - G.x, s.z - G.z); if (dd < d) { d = dd; tgt = s; } }
+        let want = G.h, spd = 6;
+        if (tgt && S.won) want = Math.atan2(G.x - tgt.x, G.z - tgt.z);
+        else if (tgt) {
+          const dx = tgt.x - G.x, dz = tgt.z - G.z, ang = Math.atan2(dx, dz);
+          if (d > 30) { want = ang; spd = 9.5; } else { want = ang + G.side * (Math.PI / 2 - clamp((d - 20) * 0.07, -0.6, 0.6)); spd = 7.5; }
+          G.cool -= dt;
+          const sd = (dx * Math.cos(G.h) - dz * Math.sin(G.h)) / (d || 1);
+          if (G.cool <= 0 && d < 50 && d > 8 && Math.abs(sd) > 0.78 && G.fade > 0.85) { ghostVolley(G, sd > 0 ? 1 : -1, tgt, d); G.cool = Math.max(2.4, rand(3.6, 5.4) - S.skulls * 0.3); }
+        }
+        G.h += clamp(wrapA(want - G.h), -0.75 * dt, 0.75 * dt);
+        G.speed += (spd - G.speed) * Math.min(1, dt * 0.6);
+        if (d > 170) { G.sinking = true; G.dismissed = true; }
+      }
+      G.x += Math.sin(G.h) * G.speed * dt; G.z += Math.cos(G.h) * G.speed * dt;
     } else {
-      G.fade = Math.min(1, G.fade + dt * 0.3);
-      const ang = Math.atan2(dx, dz);
-      let want, spd;
-      if (!play) { want = ang + Math.PI; spd = 6; }
-      else if (d > 30) { want = ang; spd = 9.5; }
-      else { want = ang + G.side * (Math.PI / 2 - clamp((d - 20) * 0.07, -0.6, 0.6)); spd = 7.5; }
-      G.h += clamp(wrapA(want - G.h), -0.75 * dt, 0.75 * dt);
-      G.speed += (spd - G.speed) * Math.min(1, dt * 0.6);
-      G.cool -= dt;
-      const sd = (dx * Math.cos(G.h) - dz * Math.sin(G.h)) / d;
-      if (play && G.cool <= 0 && d < 50 && d > 8 && Math.abs(sd) > 0.78 && G.fade > 0.85) { ghostVolley(G, sd > 0 ? 1 : -1, d); G.cool = Math.max(2.4, rand(3.6, 5.4) - S.skulls * 0.3); }
-      if (d > 170) G.sinking = true;
+      G.tx += Math.sin(G.th) * G.speed * dt; G.tz += Math.cos(G.th) * G.speed * dt;
+      const k = 1 - Math.pow(0.03, dt);
+      G.x += (G.tx - G.x) * k; G.z += (G.tz - G.z) * k; G.h += wrapA(G.th - G.h) * k;
+      if (G.gone) G.tfade = 0;
+      G.fade += (G.tfade - G.fade) * Math.min(1, dt * 3);
+      if (G.sinking) G.sink += dt * 1.1;
+      if (G.gone && G.fade < 0.02) { removeGhost(G); ghosts.splice(i, 1); continue; }
     }
-    G.x += Math.sin(G.h) * G.speed * dt; G.z += Math.cos(G.h) * G.speed * dt;
+    if (G.sinking && Math.random() < dt * 25) emit(G.x + rand(-2, 2), G.grp.position.y + rand(0, 6), G.z + rand(-2, 2), 1, { col: [0.3, 1, 0.65], spd: 0.6, up: 1.5, life: 1.6, grav: -1.2 });
     floatObj(G.grp, G.x, G.z, G.h, T, G.sink);
     G.flash = Math.max(0, G.flash - dt * 3);
-    const flick = (0.82 + 0.18 * Math.sin(T * 2.7 + i * 1.3)) * Math.max(0, G.fade) * (1 + G.flash);
+    const flick = (0.82 + 0.18 * Math.sin(T * 2.7 + G.id * 1.3)) * Math.max(0, G.fade) * (1 + G.flash);
     for (const m of G.mats.list) m.opacity = m.userData.base * flick;
-    G.grp.userData.flag.rotation.y = -Math.PI / 2 + Math.sin(T * 2.6 + i) * 0.4;
+    G.grp.userData.flag.rotation.y = -Math.PI / 2 + Math.sin(T * 2.6 + G.id) * 0.4;
     G.grp.userData.crew.forEach((c, k) => { c.position.y = 1.15 + Math.sin(T * 2 + k * 2) * 0.12; });
   }
 }
 
-// ---------- the kraken ----------
-function makeTentacle(angle, k) {
+// ---------- the Kraken ----------
+function makeTentacle(n, angle, r0, curl, phase, rise, slamT) {
   const segs = [];
   for (let i = 0; i < TSEG; i++) { const m = new THREE.Mesh(tentGeo, tentMat), s = i / (TSEG - 1); m.scale.setScalar(0.95 * (1 - s * 0.8) + 0.07); m.position.set(0, -60, 0); scene.add(m); segs.push(m); }
-  return { angle, r0: rand(7, 8.6), hp: 2, rise: -k * 0.35, alive: true, phase: rand(0, TAU), slamT: rand(4, 7) + k * 1.5, slamP: -1, recoil: 0, curl: rand(0.45, 0.85), segs, pts: segs.map(() => new THREE.Vector3(0, -60, 0)) };
+  return { n, angle, r0, hp: 2, rise, alive: true, phase, slamT, slamP: -1, recoil: 0, curl, segs, pts: segs.map(() => new THREE.Vector3(0, -60, 0)) };
 }
-function startKraken() {
-  kraken.active = true;
+function startKraken(tg) {
+  clearKraken();
+  kraken.active = true; kraken.tg = tg; kraken.noReward = false;
   const angs = [0.6, 1.55, 2.45, -0.6, -1.55, -2.45].sort(() => Math.random() - 0.5).slice(0, S.skulls >= 3 ? 5 : 4);
-  kraken.tentacles = angs.map((a, k) => makeTentacle(a, k));
-  Snd.roar(0.7); cam.shake = 1.4;
-  banner('The Kraken', 'Shoot the tentacles before they smash the hull', 4.2, true);
+  kraken.tentacles = angs.map((a, k) => makeTentacle(k, a, rand(7, 8.6), rand(0.45, 0.85), rand(0, TAU), -k * 0.35, rand(4, 7) + k * 1.5));
+  fireEvent({ e: 'kraken', tg });
 }
-function clearKraken() { kraken.tentacles.forEach(t => t.segs.forEach(s => scene.remove(s))); kraken.tentacles = []; kraken.active = false; }
-function slamHit(Tn) {
-  if (S.mode !== 'play') return;
-  damage(1);
-  const p = Tn.pts[TSEG - 1];
-  emit(p.x, p.y, p.z, 24, FX.splinter); emit(p.x, p.y, p.z, 18, FX.splash);
-  cam.shake = 1; Snd.thump(0.6); Snd.splash(0, 0.4);
-}
+function clearKraken() { kraken.tentacles.forEach(t => t.segs.forEach(s => scene.remove(s))); kraken.tentacles = []; kraken.active = false; kraken.removed.clear(); }
 function hitTentacle(Tn, p) {
-  Tn.hp--; Tn.recoil = 1;
+  Tn.recoil = 1;
   emit(p.x, p.y, p.z, 22, FX.ichor);
   Snd.squelch(panFor(p.x, p.z));
-  if (Tn.hp <= 0) { Tn.alive = false; Snd.roar(0.3); toast('Tentacle severed'); }
+  if (!AUTH) return;
+  Tn.hp--;
+  if (Tn.hp <= 0) { Tn.alive = false; fireEvent({ e: 'cut', n: Tn.n }); }
 }
-function updateTentacle(Tn, dt) {
+function updateTentacle(Tn, dt, P) {
   Tn.rise = Tn.alive ? Math.min(1, Tn.rise + dt * 0.55) : Tn.rise - dt * 0.6;
   Tn.recoil = Math.max(0, Tn.recoil - dt * 2.5);
-  if (Tn.alive && S.mode === 'play' && Tn.rise > 0.9) {
-    if (Tn.slamP < 0) { Tn.slamT -= dt; if (Tn.slamT <= 0) { Tn.slamP = 0; Snd.creak(0, 0.12); } }
-    else { const prev = Tn.slamP; Tn.slamP += dt / 1.7; if (prev < 0.55 && Tn.slamP >= 0.55) slamHit(Tn); if (Tn.slamP >= 1) { Tn.slamP = -1; Tn.slamT = rand(7, 12); } }
-  } else if (!Tn.alive) Tn.slamP = -1;
+  if (AUTH) {
+    if (Tn.alive && P && P.alive && Tn.rise > 0.9) {
+      if (Tn.slamP < 0) { Tn.slamT -= dt; if (Tn.slamT <= 0) { Tn.slamP = 0; Snd.creak(0, 0.12); } }
+      else { const prev = Tn.slamP; Tn.slamP += dt / 1.7; if (prev < 0.55 && Tn.slamP >= 0.55) fireEvent({ e: 'slam', tg: kraken.tg, n: Tn.n }); if (Tn.slamP >= 1) { Tn.slamP = -1; Tn.slamT = rand(7, 12); } }
+    } else if (!Tn.alive) Tn.slamP = -1;
+  } else if (Tn.slamP >= 0) Tn.slamP = Math.min(1, Tn.slamP + dt / 1.7);
+  if (!P) return;
   const slam = Tn.slamP >= 0 ? Math.sin(Tn.slamP * Math.PI) : 0;
-  const ca = player.h + Tn.angle, ux = Math.sin(ca), uz = Math.cos(ca), tx = Math.cos(ca), tz = -Math.sin(ca);
-  const bx = player.x + ux * Tn.r0, bz = player.z + uz * Tn.r0;
+  const ca = P.h + Tn.angle, ux = Math.sin(ca), uz = Math.cos(ca), tx = Math.cos(ca), tz = -Math.sin(ca);
+  const bx = P.x + ux * Tn.r0, bz = P.z + uz * Tn.r0;
   const curl = Tn.curl + slam * 2.0 - Tn.recoil * 0.6;
   let radial = 0, y = -2.4 - (1 - Tn.rise) * 10;
   for (let i = 0; i < TSEG; i++) {
@@ -966,57 +1501,87 @@ function updateTentacle(Tn, dt) {
   }
 }
 function stepKraken(dt) {
+  const P = shipPose(kraken.tg);
+  // the Kraken lets go of a ship that sank or left
+  if (AUTH && (!P || !P.alive) && !kraken.noReward) { kraken.noReward = true; kraken.tentacles.forEach(t => { t.alive = false; }); }
   for (let i = kraken.tentacles.length - 1; i >= 0; i--) {
     const Tn = kraken.tentacles[i];
-    updateTentacle(Tn, dt);
-    if (!Tn.alive && Tn.rise < -0.35) { Tn.segs.forEach(s => scene.remove(s)); kraken.tentacles.splice(i, 1); }
+    updateTentacle(Tn, dt, P);
+    if (!Tn.alive && Tn.rise < -0.35) { Tn.segs.forEach(s => scene.remove(s)); kraken.tentacles.splice(i, 1); kraken.removed.add(Tn.n); }
   }
   if (!kraken.tentacles.length) {
-    kraken.active = false; S.krakenT = rand(150, 210);
-    if (S.mode === 'play') { S.gold += 150; banner('The Kraken sinks back into the deep', '+150 gold', 3.4); }
+    kraken.active = false;
+    if (AUTH) {
+      S.krakenT = rand(150, 210);
+      const won = !kraken.noReward && !S.won;
+      if (won) S.gold += 150;
+      fireEvent({ e: 'krakenEnd', won });
+    }
   }
 }
 
 // ---------- cannonballs ----------
 function stepBalls(dt) {
   for (let i = balls.length - 1; i >= 0; i--) {
-    const b = balls[i], p = b.mesh.position;
+    const b = balls[i], p = b.mesh.position, own = b.owner, ghost = own === 'ghost';
     b.life += dt; b.vy -= GRAV * dt; p.x += b.vx * dt; p.y += b.vy * dt; p.z += b.vz * dt;
-    if (Math.random() < 0.6) emit(p.x, p.y, p.z, 1, b.owner === 'ghost' ? { col: [0.2, 0.8, 0.5], spd: 0.2, up: 0.2, life: 0.5, grav: 0, spread: 0.1 } : { col: [0.35, 0.22, 0.1], spd: 0.2, up: 0.3, life: 0.5, grav: 0, spread: 0.1 });
+    if (Math.random() < 0.6) emit(p.x, p.y, p.z, 1, ghost ? { col: [0.2, 0.8, 0.5], spd: 0.2, up: 0.2, life: 0.5, grav: 0, spread: 0.1 } : { col: [0.35, 0.22, 0.1], spd: 0.2, up: 0.3, life: 0.5, grav: 0, spread: 0.1 });
     let hit = false;
-    if (b.owner === 'player') {
-      for (const G of ghosts) if (!G.sinking && G.fade > 0.3 && inShip(p, G.x, G.z, G.h, G.grp.position.y, 3, 9)) { hitGhost(G, p); hit = true; break; }
+    const harmful = ghost || pvp;
+    // your own hull: you decide when you're hit
+    if (harmful && own !== myId && S.mode === 'play' && inShip(p, player.x, player.z, player.h, player.grp.position.y, 2.4, 3.4)) {
+      damage(1); emit(p.x, p.y, p.z, 20, ghost ? FX.ghost : FX.splinter);
+      toast(ghost ? 'Hull breached' : `${crewName(own)} hit your ship`);
+      hit = true;
+    }
+    // a crewmate's hull: just the splinters, their tab counts the damage
+    if (!hit && harmful) for (const R of remotes.values()) {
+      if (R.id === own || !R.seen || R.st !== 'sail') continue;
+      if (inShip(p, R.x, R.z, R.h, R.grp.position.y, 2.4, 3.4)) { emit(p.x, p.y, p.z, 18, ghost ? FX.ghost : FX.splinter); Snd.crack(panFor(p.x, p.z), volFor(p.x, p.z) * 0.6); hit = true; break; }
+    }
+    if (!hit && !ghost) {
+      for (const G of ghosts) if (!G.sinking && G.fade > 0.3 && inShip(p, G.x, G.z, G.h, G.grp.position.y, 3, 9)) { hitGhost(G, p, own); hit = true; break; }
       if (!hit && kraken.active) {
         outer: for (const Tn of kraken.tentacles) {
           if (!Tn.alive || Tn.rise < 0.4) continue;
           for (let k = 0; k < TSEG; k++) { const r = Tn.segs[k].scale.x + 0.55; if (p.distanceToSquared(Tn.pts[k]) < r * r) { hitTentacle(Tn, p); hit = true; break outer; } }
         }
       }
-    } else if (S.mode === 'play' && inShip(p, player.x, player.z, player.h, player.grp.position.y, 2.4, 3.4)) {
-      damage(1); emit(p.x, p.y, p.z, 20, FX.ghost); toast('Hull breached'); hit = true;
     }
     if (!hit && p.y < waveH(p.x, p.z, T) - 0.3) { emit(p.x, p.y + 0.3, p.z, 14, FX.splash); Snd.splash(panFor(p.x, p.z), 0.35 * volFor(p.x, p.z, 50)); hit = true; }
     if (hit || b.life > 6) { scene.remove(b.mesh); balls.splice(i, 1); }
   }
 }
 
-// ---------- loot and the eyes in the fog ----------
-function spawnLoot() {
-  const a = player.h + rand(-1, 1), d = rand(38, 70), x = player.x + Math.sin(a) * d, z = player.z + Math.cos(a) * d;
-  if (islands.some(I => Math.hypot(I.x - x, I.z - z) < I.col + 4)) return;
+// ---------- barrels and the eyes in the fog ----------
+function makeLoot(id, x, z) {
   const g = new THREE.Group(); g.add(new THREE.Mesh(barrelGeo, barrelMat));
   const gl = glowSprite(0xffc35a, 4, 0.6); gl.position.y = 0.6; g.add(gl); scene.add(g);
-  loot.push({ grp: g, x, z, spin: rand(0, TAU) });
+  const L = { id, grp: g, x, z, spin: rand(0, TAU) };
+  loot.push(L);
+  return L;
 }
+function spawnLoot(near) {
+  const a = near.h + rand(-1, 1), d = rand(38, 70), x = near.x + Math.sin(a) * d, z = near.z + Math.cos(a) * d;
+  if (islands.some(I => Math.hypot(I.x - x, I.z - z) < I.col + 4)) return;
+  makeLoot(lootSeq++, r2(x), r2(z));
+}
+function removeLoot(L) { scene.remove(L.grp); const i = loot.indexOf(L); if (i >= 0) loot.splice(i, 1); }
+function grabLoot(L, by) { removeLoot(L); S.gold += 25; }
 function stepLoot(dt) {
-  if (S.mode === 'play') { S.lootT -= dt; if (S.lootT <= 0) { if (loot.length < 4) spawnLoot(); S.lootT = rand(7, 14); } }
+  if (AUTH && S.live && !S.won) {
+    S.lootT -= dt;
+    if (S.lootT <= 0) { const ships = crewShips(); if (ships.length && loot.length < 3 + crewInfo.size) spawnLoot(ships[Math.floor(Math.random() * ships.length)]); S.lootT = rand(7, 14) / Math.max(1, crewShips().length * 0.7); }
+  }
   for (let i = loot.length - 1; i >= 0; i--) {
     const L = loot[i]; L.spin += dt * 0.6;
     L.grp.position.set(L.x, waveH(L.x, L.z, T) - 0.1, L.z);
     L.grp.rotation.set(Math.sin(T * 1.3 + L.spin) * 0.25, L.spin, Math.sin(T * 1.7 + L.spin) * 0.2);
-    const d = distTo(L.x, L.z);
-    if (d < 5.5 && S.mode === 'play') { S.gold += 25; Snd.coin(); emit(L.x, 1, L.z, 26, FX.gold); toast('+25 gold'); scene.remove(L.grp); loot.splice(i, 1); }
-    else if (d > 150) { scene.remove(L.grp); loot.splice(i, 1); }
+    if (distTo(L.x, L.z) < 5.5 && S.mode === 'play') {
+      Snd.coin(); emit(L.x, 1, L.z, 26, FX.gold); toast('+25 gold');
+      if (AUTH) grabLoot(L, myId);
+      else { NET.send({ t: 'grab', id: L.id }); lootGrabbed.add(L.id); removeLoot(L); }
+    } else if (AUTH && crewShips().every(s => Math.hypot(L.x - s.x, L.z - s.z) > 150)) removeLoot(L);
   }
 }
 function spawnEyes() {
@@ -1041,30 +1606,49 @@ function stepEyes(dt) {
 }
 
 // ---------- skulls, winning, sinking ----------
-const LINES = ['The dead want it back.', 'The fog is getting thicker.', 'Something enormous stirs below.', 'One more. They know exactly where you are.'];
-function collectSkull(I) {
-  I.taken = true; S.haulP = 0; S.skulls++; S.gold += 100;
-  I.skullMesh.visible = false; I.glow.visible = false; I.beam.visible = false; I.flames.forEach(f => { f.visible = false; });
-  emit(I.sx, I.sy, I.sz, 60, Object.assign({}, FX.ghost, { spd: 4, up: 5, life: 1.6 }));
-  if (cargo[S.skulls - 1]) cargo[S.skulls - 1].visible = true;
-  Snd.chime(); Snd.laugh(panFor(I.sx, I.sz), 0.22);
-  if (S.skulls >= S.total) { win(); return; }
-  banner(`Cursed skull ${S.skulls} of ${S.total}`, LINES[S.skulls - 1] || '', 3.6);
-  S.ghostT = Math.min(S.ghostT, 5);
-  if (S.skulls === 3) S.krakenT = Math.min(S.krakenT, 25);
+// the host decides who got the skull; every tab then takes it off its island
+function collectSkull(i, by) {
+  const I = islands[i]; if (!I || !I.skull || I.taken) return;
+  S.gold += 100;
+  fireEvent({ e: 'skull', i, by });
+  if (islands.every(J => !J.skull || J.taken)) fireEvent({ e: 'win' });
+  else { S.ghostT = Math.min(S.ghostT, 5); if (S.skulls === 3) S.krakenT = Math.min(S.krakenT, 25); }
 }
+function takeSkull(i) {
+  const I = islands[i]; if (!I || !I.skull || I.taken) return false;
+  I.taken = true; I.pending = false;
+  I.skullMesh.visible = false; I.glow.visible = false; I.beam.visible = false; I.flames.forEach(f => { f.visible = false; });
+  S.skulls = islands.filter(J => J.skull && J.taken).length;
+  cargo.forEach((c, k) => { c.visible = k < S.skulls; });
+  return true;
+}
+const takenList = () => islands.filter(I => I.taken).map(I => I.idx);
 function saveBest() { if (S.gold > BEST) { BEST = S.gold; try { localStorage.setItem('cursedTideBest', String(BEST)); } catch (e) {} } }
 function win() {
-  S.mode = 'won'; S.endT = 0;
+  if (S.won) return;
+  if (S.mode === 'ferry' || S.mode === 'sinking') respawn(true);
+  S.won = true; S.mode = 'won'; S.endT = 0;
   banner('The curse is lifted', 'Dawn breaks over the Shroud', 6);
-  ghosts.forEach(G => { G.sinking = true; });
-  kraken.tentacles.forEach(t => { t.alive = false; });
+  if (AUTH) {
+    ghosts.forEach(G => { if (!G.sinking) { G.sinking = true; G.dismissed = true; } });
+    kraken.noReward = true; kraken.tentacles.forEach(t => { t.alive = false; });
+  }
   Snd.dawn(); saveBest();
 }
 function sinkShip() {
   S.mode = 'sinking'; S.sinkT = 0;
-  banner("She's going down", 'The black water takes the ship', 4, true);
+  banner("She's going down", NET ? 'The Ferry of the Damned is coming for you' : 'The black water takes the ship', 4, true);
   Snd.wail(0, 0.3); Snd.laugh(0, 0.3); saveBest();
+}
+// in a crew, a sunk pirate waits on the Ferry of the Damned, then sails again
+function toFerry() { S.mode = 'ferry'; S.ferryT = 10; player.grp.visible = false; $('ferry').hidden = false; setPrompt(''); }
+function respawn(quiet) {
+  const ships = [...remotes.values()].filter(R => R.seen && R.st === 'sail');
+  const at = ships.length ? spotNear(ships[Math.floor(Math.random() * ships.length)]) : safeSpot(CREW_X[myColor] || 0, 0, 0);
+  Object.assign(player, { x: at.x, z: at.z, h: at.h, speed: 0, sink: 0 });
+  Object.assign(S, { holes: 0, water: 0, sail: 0.35, repairP: 0, haulP: 0, sinkT: 0, mode: 'play' });
+  player.grp.visible = true; $('ferry').hidden = true;
+  if (!quiet) banner('Back from the Ferry of the Damned', 'Your crew needs you', 3);
 }
 const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 function showEnd(won) {
@@ -1072,18 +1656,22 @@ function showEnd(won) {
   $('endEyebrow').textContent = won ? 'Dawn over the Shroud' : 'Lost at sea';
   $('endTitle').textContent = won ? 'The Curse Is Lifted' : 'Claimed by the Deep';
   $('endText').textContent = won
-    ? `You hauled all ${S.total} cursed skulls aboard and the dead let go of the sea. The ghost ships went down with the night.`
+    ? (NET ? `Your crew hauled all ${S.total} cursed skulls aboard and the dead let go of the sea.` : `You hauled all ${S.total} cursed skulls aboard and the dead let go of the sea. The ghost ships went down with the night.`)
     : S.skulls ? `You hauled ${S.skulls} of ${S.total} cursed skulls aboard before the sea took your ship. The dead keep what they catch.`
     : 'Your ship filled with black water and slid under the waves. The dead keep what they catch.';
   $('stSkulls').textContent = `${S.skulls}/${S.total}`; $('stGold').textContent = S.gold; $('stTime').textContent = fmtTime(S.playTime);
-  $('endBest').textContent = S.gold > 0 && S.gold >= BEST ? 'A new best haul.' : `Your best haul: ${BEST} gold.`;
+  const guest = NET && !NET.isHost;
+  $('againBtn').hidden = guest;
+  $('againBtn').textContent = NET ? 'Sail again with your crew' : 'Sail again';
+  $('endLeave').hidden = !NET;
+  $('endBest').textContent = guest ? 'Waiting for the captain to sail again.' : S.gold > 0 && S.gold >= BEST ? 'A new best haul.' : `Your best haul: ${BEST} gold.`;
   $('end').hidden = false; $('hud').classList.add('off'); $('touch').hidden = true; setPrompt('');
-  $('againBtn').focus();
+  (guest ? $('endLeave') : $('againBtn')).focus();
 }
 
 // ---------- per-frame game logic ----------
 function stepGame(dt) {
-  const play = S.mode === 'play', ctl = play || S.mode === 'won';
+  const play = S.mode === 'play', ctl = sailing() && !menuOpen;
   if (play) S.playTime += dt;
   if (ctl) {
     if (keys.w) S.sail = Math.min(1, S.sail + dt * 0.5);
@@ -1095,34 +1683,38 @@ function stepGame(dt) {
   } else S.rudder *= Math.pow(0.1, dt);
   S.coolL = Math.max(0, S.coolL - dt); S.coolR = Math.max(0, S.coolR - dt);
 
-  const held = kraken.active && kraken.tentacles.some(t => t.alive);
-  const target = S.mode === 'sinking' ? 0 : S.sail * MAX_SPEED * (1 - 0.5 * S.water / 100) * (held ? 0.04 : 1);
-  player.speed += (target - player.speed) * Math.min(1, dt * (held ? 1.6 : 0.4));
-  player.h += S.rudder * (0.24 + 0.5 * Math.min(1, player.speed / 7)) * (held ? 0.3 : 1) * dt;
-  player.x += Math.sin(player.h) * player.speed * dt;
-  player.z += Math.cos(player.h) * player.speed * dt;
-
-  S.groundCD -= dt;
-  for (const I of islands) {
-    const dx = player.x - I.x, dz = player.z - I.z, d = Math.hypot(dx, dz) || 0.001;
-    if (d < I.col) {
-      player.x = I.x + dx / d * I.col; player.z = I.z + dz / d * I.col;
-      if (player.speed > 3.5 && S.groundCD <= 0 && play) { damage(1); S.groundCD = 2.5; banner('Ran aground', 'The rocks tore a hole in the hull', 2.4); }
-      player.speed *= Math.pow(0.05, dt);
+  if (S.mode !== 'ferry') {
+    const held = kraken.active && kraken.tg === myId && kraken.tentacles.some(t => t.alive);
+    const target = S.mode === 'sinking' ? 0 : S.sail * MAX_SPEED * (1 - 0.5 * S.water / 100) * (held ? 0.04 : 1);
+    player.speed += (target - player.speed) * Math.min(1, dt * (held ? 1.6 : 0.4));
+    player.h += S.rudder * (0.24 + 0.5 * Math.min(1, player.speed / 7)) * (held ? 0.3 : 1) * dt;
+    player.x += Math.sin(player.h) * player.speed * dt;
+    player.z += Math.cos(player.h) * player.speed * dt;
+    S.groundCD -= dt;
+    for (const I of islands) {
+      const dx = player.x - I.x, dz = player.z - I.z, d = Math.hypot(dx, dz) || 0.001;
+      if (d < I.col) {
+        player.x = I.x + dx / d * I.col; player.z = I.z + dz / d * I.col;
+        if (player.speed > 3.5 && S.groundCD <= 0 && play) { damage(1); S.groundCD = 2.5; banner('Ran aground', 'The rocks tore a hole in the hull', 2.4); }
+        player.speed *= Math.pow(0.05, dt);
+      }
     }
   }
 
   let near = null;
-  for (const I of islands) if (I.skull && !I.taken && Math.hypot(player.x - I.sx, player.z - I.sz) < HAUL_R) near = I;
-  if (near && play) {
-    if (keys.f) {
-      S.haulP += dt / 2.4;
-      if (Math.random() < dt * 20) emit(near.sx, near.sy, near.sz, 1, { col: [0.3, 1, 0.7], spd: 1, up: 2, life: 0.8, grav: -1 });
-      if (S.haulP >= 1) collectSkull(near);
-    } else S.haulP = Math.max(0, S.haulP - dt * 0.8);
-  } else S.haulP = 0;
+  if (play) for (const I of islands) if (I.skull && !I.taken && !I.pending && Math.hypot(player.x - I.sx, player.z - I.sz) < HAUL_R) near = I;
+  if (near && ctl && keys.f) {
+    S.haulP += dt / 2.4;
+    if (Math.random() < dt * 20) emit(near.sx, near.sy, near.sz, 1, { col: [0.3, 1, 0.7], spd: 1, up: 2, life: 0.8, grav: -1 });
+    if (S.haulP >= 1) {
+      S.haulP = 0;
+      if (AUTH) collectSkull(near.idx, myId);
+      else { near.pending = true; NET.send({ t: 'haul', i: near.idx }); }
+    }
+  } else if (near) S.haulP = Math.max(0, S.haulP - dt * 0.8);
+  else S.haulP = 0;
 
-  if (play && keys.r) {
+  if (play && ctl && keys.r) {
     if (S.holes > 0) {
       S.repairP += dt / 1.2; S.knockT -= dt;
       if (S.knockT <= 0) { Snd.knock(); S.knockT = 0.3; }
@@ -1136,24 +1728,15 @@ function stepGame(dt) {
   if (play && S.water >= 100) sinkShip();
 
   let pt = '', pp = -1;
-  if (play && near && !near.taken) { pt = `${holdKey('F', 'Haul')} to haul the cursed skull aboard`; pp = S.haulP; }
-  else if (play && S.holes > 0) { pt = keys.r ? 'Patching the hull' : `${holdKey('R', 'Patch')} to patch ${S.holes === 1 ? 'the hole' : S.holes + ' holes'}`; pp = keys.r ? S.repairP : -1; }
-  else if (play && S.water > 25) { pt = keys.r ? 'Bailing out the water' : `${holdKey('R', 'Patch')} to bail out the water`; }
+  if (play && !menuOpen) {
+    if (near) { pt = `${holdKey('F', 'Haul')} to haul the cursed skull aboard`; pp = S.haulP; }
+    else if (S.holes > 0) { pt = keys.r ? 'Patching the hull' : `${holdKey('R', 'Patch')} to patch ${S.holes === 1 ? 'the hole' : S.holes + ' holes'}`; pp = keys.r ? S.repairP : -1; }
+    else if (S.water > 25) { pt = keys.r ? 'Bailing out the water' : `${holdKey('R', 'Patch')} to bail out the water`; }
+  }
   setPrompt(pt, pp);
 
+  // things only you hear and see
   if (play) {
-    S.ghostT -= dt;
-    if (S.ghostT <= 0) {
-      if (ghosts.filter(g => !g.sinking).length < 1 + Math.floor(S.skulls / 2) && !kraken.active) spawnGhost();
-      S.ghostT = rand(38, 55) - S.skulls * 5;
-    }
-    if (!kraken.active) {
-      S.krakenT -= dt;
-      if (S.krakenT <= 0) {
-        const nearIsl = islands.some(I => distTo(I.x, I.z) < I.col + 25);
-        if (!nearIsl && ghosts.filter(g => !g.sinking).length <= 1) startKraken(); else S.krakenT = 8;
-      }
-    }
     S.eyesT -= dt; if (S.eyesT <= 0) { spawnEyes(); S.eyesT = rand(9, 20); }
     S.creakT -= dt; if (S.creakT <= 0) { Snd.creak(rand(-0.4, 0.4), 0.08); S.creakT = rand(4, 9); }
     const nearSkull = islands.some(I => I.skull && !I.taken && Math.hypot(player.x - I.sx, player.z - I.sz) < 45);
@@ -1162,7 +1745,9 @@ function stepGame(dt) {
     if (liveG) { S.moanT -= dt; if (S.moanT <= 0) { Snd.wail(panFor(liveG.x, liveG.z), 0.1 * volFor(liveG.x, liveG.z, 80)); S.moanT = rand(12, 22); } }
     if (S.water > 55) { S.beatT -= dt; if (S.beatT <= 0) { Snd.thump(0.5); S.beatT = lerp(1.0, 0.55, (S.water - 55) / 45); } }
   }
-  if (S.mode === 'sinking') { S.sinkT += dt; player.sink += dt * (0.4 + S.sinkT * 0.35); if (S.sinkT > 5) showEnd(false); }
+
+  if (S.mode === 'sinking') { S.sinkT += dt; player.sink += dt * (0.4 + S.sinkT * 0.35); if (S.sinkT > 5) { if (NET) toFerry(); else showEnd(false); } }
+  if (S.mode === 'ferry') { S.ferryT -= dt; setText($('ferryText'), `Back at sea in ${Math.max(1, Math.ceil(S.ferryT))}`); if (S.ferryT <= 0) respawn(false); }
   if (S.mode === 'won') { S.dawn = Math.min(1, S.dawn + dt / 9); S.endT += dt; if (S.endT > 8) showEnd(true); }
 
   S.moodT -= dt;
@@ -1170,9 +1755,28 @@ function stepGame(dt) {
     S.moodT = 0.5;
     let danger = 0;
     for (const G of ghosts) if (!G.sinking) danger = Math.max(danger, 1 - distTo(G.x, G.z) / 90);
-    if (kraken.active) danger = 1;
+    if (kraken.active) danger = Math.max(danger, kraken.tg === myId ? 1 : 0.4);
     danger = Math.max(danger, S.water / 140) * (1 - S.dawn);
     Snd.setMood(danger, 1 - S.dawn);
+  }
+}
+
+// the world: run by the host (or a solo tab)
+function stepWorldRules(dt) {
+  if (!AUTH || !S.live || S.won) return;
+  S.ghostT -= dt;
+  if (S.ghostT <= 0) {
+    const ships = crewShips();
+    const cap = Math.min(4, 1 + Math.floor(S.skulls / 2) + (crewInfo.size > 1 ? 1 : 0));
+    if (ships.length && ghosts.filter(g => !g.sinking).length < cap && !kraken.active) spawnGhost(ships[Math.floor(Math.random() * ships.length)]);
+    S.ghostT = rand(38, 55) - S.skulls * 5;
+  }
+  if (!kraken.active) {
+    S.krakenT -= dt;
+    if (S.krakenT <= 0) {
+      const c = crewShips().filter(s => !islands.some(I => Math.hypot(s.x - I.x, s.z - I.z) < I.col + 25));
+      if (c.length && ghosts.filter(g => !g.sinking).length <= 1) startKraken(c[Math.floor(Math.random() * c.length)].id); else S.krakenT = 8;
+    }
   }
 }
 
@@ -1195,7 +1799,6 @@ function stepWorld(dt) {
   lanternLight.intensity = 1.2 + Math.sin(T * 13) * 0.08 + Math.random() * 0.12;
   bilge.visible = S.water > 1; bilge.position.y = 0.62 + S.water / 100 * 0.5;
 
-  // weather and light
   if (S.dawn < 0.2) { S.lightT -= dt; if (S.lightT <= 0) { strike(); S.lightT = rand(7, 16) / (1 + S.skulls * 0.15); } }
   flashT += dt;
   for (const q of flashQ) if (!q.done && flashT >= q.at) { q.done = true; flash = Math.max(flash, q.v); }
@@ -1204,7 +1807,9 @@ function stepWorld(dt) {
   wraith.material.opacity = wraithOn ? Math.min(1, flash * 1.6) : 0; wraith.visible = wraith.material.opacity > 0.01;
   if (thunderT >= 0) { thunderT -= dt; if (thunderT < 0) Snd.thunder(thunderV, thunderPan); }
 
-  krakenMix += ((kraken.active ? 1 : 0) - krakenMix) * Math.min(1, dt * 0.8);
+  let km = 0;
+  if (kraken.active) { const P = shipPose(kraken.tg); km = kraken.tg === myId ? 1 : P ? clamp(1.2 - distTo(P.x, P.z) / 120, 0, 1) : 0; }
+  krakenMix += (km - krakenMix) * Math.min(1, dt * 0.8);
   const fl = Math.min(1, flash * 0.7 * FLASHK);
   tmpC.copy(FOG_NIGHT).lerp(FOG_KRAKEN, krakenMix).lerp(FOG_DAWN, S.dawn).lerp(FOG_FLASH, fl);
   scene.fog.color.copy(tmpC); scene.background.copy(tmpC);
@@ -1218,7 +1823,8 @@ function stepWorld(dt) {
   moonDisc.material.opacity = 0.55 * (1 - S.dawn); moonHalo.material.opacity = 0.28 * (1 - S.dawn);
   sunGlow.position.copy(camera.position).add(tmpV.set(-MOON_DIR.x, 0.06, -MOON_DIR.z).normalize().multiplyScalar(320)); sunGlow.material.opacity = S.dawn * 0.8;
 
-  updateOcean(T, player.x, player.z);
+  const f = focus();
+  updateOcean(T, f.x, f.z);
   updateRain(dt);
   for (const I of islands) {
     if (!I.skull || I.taken) continue;
@@ -1226,7 +1832,7 @@ function stepWorld(dt) {
     const shake = (S.haulP > 0 && Math.hypot(player.x - I.sx, player.z - I.sz) < HAUL_R) ? S.haulP : 0;
     I.skullMesh.position.set(Math.sin(T * 40) * 0.06 * shake, 3.6 + Math.sin(T * 1.5) * 0.15 + shake * 0.8, 0);
     I.skullMesh.rotation.y = Math.sin(T * 0.5) * 0.4;
-    I.flames.forEach((f, k) => { const s = 1.4 + Math.random() * 0.5 + Math.sin(T * 9 + k) * 0.2; f.scale.set(s, s * 1.3, 1); });
+    I.flames.forEach((fl2, k) => { const s = 1.4 + Math.random() * 0.5 + Math.sin(T * 9 + k) * 0.2; fl2.scale.set(s, s * 1.3, 1); });
   }
   updateParts(dt);
 
@@ -1246,24 +1852,30 @@ function strike() {
 // ---------- camera ----------
 const cam = { yawOff: 0, pitch: 0.3, dist: 19, drag: false, lx: 0, ly: 0, idle: 0, shake: 0 };
 const camT = new THREE.Vector3(), look = new THREE.Vector3();
+// what the camera follows: your ship, or a crewmate's while you ride the Ferry
+function focus() {
+  if (S.mode === 'ferry') for (const R of remotes.values()) if (R.seen && R.st === 'sail') return { x: R.x, z: R.z, h: R.h, y: R.grp.position.y };
+  return { x: player.x, z: player.z, h: player.h, y: player.grp.position.y };
+}
 function updateCamera(dt) {
+  const f = focus();
   let pitch = cam.pitch, dist = cam.dist;
-  if (S.mode === 'title') { camYaw = player.h + 2.4 + T * 0.05; pitch = 0.2; dist = 24; }
-  else { if (!cam.drag) { cam.idle += dt; if (cam.idle > 2.5) cam.yawOff *= Math.pow(0.35, dt); } camYaw = player.h + cam.yawOff; }
-  const py = Math.max(player.grp.position.y, -1) + 3, cd = Math.cos(pitch) * dist;
-  camT.set(player.x - Math.sin(camYaw) * cd, py + Math.sin(pitch) * dist, player.z - Math.cos(camYaw) * cd);
+  if (S.mode === 'title') { camYaw = f.h + 2.4 + T * 0.05; pitch = 0.2; dist = 24; }
+  else { if (!cam.drag) { cam.idle += dt; if (cam.idle > 2.5) cam.yawOff *= Math.pow(0.35, dt); } camYaw = f.h + cam.yawOff; }
+  const py = Math.max(f.y, -1) + 3, cd = Math.cos(pitch) * dist;
+  camT.set(f.x - Math.sin(camYaw) * cd, py + Math.sin(pitch) * dist, f.z - Math.cos(camYaw) * cd);
   camera.position.lerp(camT, 1 - Math.pow(0.0015, dt));
   const wy = waveH(camera.position.x, camera.position.z, T) + 1.5; if (camera.position.y < wy) camera.position.y = wy;
-  look.set(player.x + Math.sin(player.h) * 3, py + 0.5, player.z + Math.cos(player.h) * 3);
+  look.set(f.x + Math.sin(f.h) * 3, py + 0.5, f.z + Math.cos(f.h) * 3);
   camera.lookAt(look);
   if (cam.shake > 0 && !REDUCED) { const k = cam.shake * 0.25; camera.position.x += rand(-k, k); camera.position.y += rand(-k, k); camera.position.z += rand(-k, k); }
   cam.shake = Math.max(0, cam.shake - dt * 2.2);
 }
 
 // ---------- HUD ----------
-const EL = {}; ['gold', 'skulls', 'sailBar', 'waterBar', 'waterWrap', 'holes', 'gunL', 'gunR', 'gunLW', 'gunRW', 'dist', 'compass'].forEach(id => { EL[id] = $(id); });
+const EL = {}; ['gold', 'skulls', 'sailBar', 'waterBar', 'waterWrap', 'holes', 'gunL', 'gunR', 'gunLW', 'gunRW', 'dist', 'compass', 'crew'].forEach(id => { EL[id] = $(id); });
 const CSS = getComputedStyle(document.documentElement), tok = n => CSS.getPropertyValue(n).trim();
-const COL = { bone: tok('--bone') || '#e4dbc4', ash: tok('--ash') || '#93a09a', spectre: tok('--spectre') || '#7affc8', ember: tok('--ember') || '#ffa552', blood: tok('--blood') || '#e0483e', abyss: tok('--abyss') || '#05090b' };
+const COL = { bone: tok('--bone') || '#e4dbc4', spectre: tok('--spectre') || '#7affc8', ember: tok('--ember') || '#ffa552', blood: tok('--blood') || '#e0483e', abyss: tok('--abyss') || '#05090b' };
 const SKULL_SVG = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2C5.6 2 3 5 3 8.6c0 2.2 1 3.6 2.4 4.4V16h2v-1.6h1.2V16h2.8v-1.6h1.2V16h2v-3c1.4-.8 2.4-2.2 2.4-4.4C17 5 14.4 2 10 2z"/><circle class="eye" cx="7.3" cy="9" r="1.6"/><circle class="eye" cx="12.7" cy="9" r="1.6"/></svg>';
 const cache = {};
 function setText(el, v) { if (el._t !== v) { el._t = v; el.textContent = v; } }
@@ -1272,6 +1884,7 @@ const cg = EL.compass.getContext('2d');
 function sizeCompass() { const r = EL.compass.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); EL.compass.width = Math.max(1, Math.round(r.width * d)); EL.compass.height = Math.max(1, Math.round(r.height * d)); }
 function drawCompass() {
   const W = EL.compass.width, H = EL.compass.height, k = H / 38, span = 1.7, base = H * 0.6;
+  const f = focus();
   cg.clearRect(0, 0, W, H);
   const toX = rel => W / 2 + rel / span * W;
   cg.lineWidth = k; cg.strokeStyle = 'rgba(228,219,196,.35)'; cg.beginPath(); cg.moveTo(0, base); cg.lineTo(W, base); cg.stroke();
@@ -1286,20 +1899,46 @@ function drawCompass() {
   }
   cg.fillStyle = COL.bone; cg.beginPath(); cg.moveTo(W / 2, base + 2 * k); cg.lineTo(W / 2 - 4 * k, base + 8 * k); cg.lineTo(W / 2 + 4 * k, base + 8 * k); cg.closePath(); cg.fill();
   const mark = (x, z, col, kind) => {
-    let rel = wrapA(camYaw - Math.atan2(x - player.x, z - player.z));
+    let rel = wrapA(camYaw - Math.atan2(x - f.x, z - f.z));
     const edge = Math.abs(rel) > span / 2; if (edge) rel = Math.sign(rel) * span / 2;
     const px = clamp(toX(rel), 7 * k, W - 7 * k), py = H * 0.82;
     cg.fillStyle = col; cg.globalAlpha = edge ? 0.6 : 1;
     if (kind === 'skull') { cg.beginPath(); cg.arc(px, py - k, 5 * k, 0, TAU); cg.fill(); cg.fillRect(px - 3 * k, py + 2 * k, 6 * k, 3 * k); cg.fillStyle = COL.abyss; cg.beginPath(); cg.arc(px - 2 * k, py - k, 1.4 * k, 0, TAU); cg.arc(px + 2 * k, py - k, 1.4 * k, 0, TAU); cg.fill(); }
+    else if (kind === 'crew') { cg.beginPath(); cg.moveTo(px, py - 5 * k); cg.lineTo(px + 4 * k, py + 3 * k); cg.lineTo(px - 4 * k, py + 3 * k); cg.closePath(); cg.fill(); }
     else { cg.beginPath(); cg.arc(px, py, (kind === 'ghost' ? 3.2 : 2.4) * k, 0, TAU); cg.fill(); }
     cg.globalAlpha = 1;
   };
   for (const L of loot) mark(L.x, L.z, COL.ember, 'loot');
   for (const G of ghosts) if (!G.sinking) mark(G.x, G.z, COL.blood, 'ghost');
+  for (const R of remotes.values()) if (R.seen && R.st !== 'ferry') mark(R.x, R.z, CREW_HEX[(crewInfo.get(R.id) || {}).color] || COL.bone, 'crew');
   for (const I of islands) if (I.skull && !I.taken) mark(I.sx, I.sz, COL.spectre, 'skull');
+}
+function statusOf(st, holes) { return st === 'ferry' ? 'on the Ferry' : st === 'sinking' ? 'sinking' : holes ? `${holes} ${holes === 1 ? 'hole' : 'holes'}` : ''; }
+function crewHud() {
+  if (!NET) { EL.crew.hidden = true; return; }
+  const rows = [];
+  for (const [id, c] of crewInfo) {
+    let st = '';
+    if (id === myId) st = statusOf(S.mode === 'ferry' ? 'ferry' : S.mode === 'sinking' ? 'sinking' : 'sail', S.holes);
+    else { const R = remotes.get(id); if (R && R.seen) st = statusOf(R.st, R.ho); }
+    rows.push([c.name + (id === myId ? ' (you)' : ''), c.color, st]);
+  }
+  const sig = JSON.stringify(rows);
+  if (cache.crew === sig) return;
+  cache.crew = sig;
+  EL.crew.hidden = false;
+  EL.crew.replaceChildren(...rows.map(([name, color, st]) => {
+    const li = document.createElement('li');
+    const dot = document.createElement('i'); dot.className = 'dot'; dot.style.background = CREW_HEX[color] || CREW_HEX[0];
+    const nm = document.createElement('span'); nm.textContent = name;
+    li.append(dot, nm);
+    if (st) { const em = document.createElement('em'); em.textContent = st; li.append(em); }
+    return li;
+  }));
 }
 function hud() {
   if (S.mode === 'title') return;
+  $('hud').classList.toggle('ferrying', S.mode === 'ferry');
   setText(EL.gold, String(S.gold));
   const sk = S.skulls + '/' + S.total;
   if (cache.sk !== sk) { cache.sk = sk; EL.skulls.innerHTML = Array.from({ length: S.total }, (_, i) => SKULL_SVG.replace('<svg', `<svg class="${i < S.skulls ? 'got' : ''}"`)).join(''); }
@@ -1310,48 +1949,294 @@ function hud() {
   setW(EL.gunL, 1 - S.coolL / COOL); setW(EL.gunR, 1 - S.coolR / COOL);
   EL.gunLW.classList.toggle('ready', S.coolL <= 0); EL.gunRW.classList.toggle('ready', S.coolR <= 0);
   let nd = Infinity; for (const I of islands) if (I.skull && !I.taken) nd = Math.min(nd, distTo(I.sx, I.sz));
-  setText(EL.dist, nd < Infinity ? (nd < HAUL_R ? 'The cursed skull is within reach' : `Nearest cursed skull: ${Math.round(nd)} yards`) : '');
+  setText(EL.dist, S.mode === 'ferry' ? '' : nd < Infinity ? (nd < HAUL_R ? 'The cursed skull is within reach' : `Nearest cursed skull: ${Math.round(nd)} yards`) : '');
   drawCompass();
+  crewHud();
 }
 
-// ---------- flow ----------
-function resetGame() {
+// ---------- voyages ----------
+function resetGame(seed) {
   ghosts.forEach(removeGhost); ghosts.length = 0;
   balls.forEach(b => scene.remove(b.mesh)); balls.length = 0;
-  loot.forEach(L => scene.remove(L.grp)); loot.length = 0;
+  loot.forEach(L => scene.remove(L.grp)); loot.length = 0; lootGrabbed.clear();
   eyes.forEach(e => { e.s.forEach(sp => scene.remove(sp)); e.mat.dispose(); }); eyes.length = 0;
   clearKraken();
   islands.forEach(I => { scene.remove(I.grp); I.geos.forEach(g => g.dispose()); if (I.beam) { scene.remove(I.beam); I.beam.material.dispose(); } }); islands.length = 0;
-  placeIslands();
+  placeIslands(seed);
   Object.assign(player, { x: 0, z: 0, h: 0, speed: 0, sink: 0 });
-  S = fresh(); S.total = islands.filter(I => I.skull).length;
+  player.grp.visible = true;
+  S = fresh(); S.seed = seed; S.total = islands.filter(I => I.skull).length;
   cargo.forEach(c => { c.visible = false; });
   parts.forEach(p => { p.life = 0; });
-  krakenMix = 0; flash = 0; hurt = 0; cache.sk = null;
+  for (const R of remotes.values()) { R.seen = false; R.sink = 0; }
+  krakenMix = 0; flash = 0; hurt = 0; cache.sk = null; cache.crew = null;
   cam.yawOff = 0; cam.pitch = 0.3; cam.dist = 19;
 }
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
-function startGame() {
+const newSeed = () => Math.floor(Math.random() * 2147483647);
+function startVoyage(m) {
   Snd.init();
-  resetGame();
-  S.mode = 'play';
-  $('title').hidden = true; $('end').hidden = true; $('paused').hidden = true;
+  resetGame(m.seed);
+  pvp = !!m.pvp;
+  PM.sail.color.copy(sailTint(myColor)); PM.skullSail.color.copy(sailTint(myColor));
+  for (const i of m.tk || []) takeSkull(i);
+  S.gold = m.g || 0;
+  S.mode = 'play'; S.live = true; menuOpen = false;
+  const at = m.at || safeSpot(CREW_X[myColor] || 0, 0, 0);
+  Object.assign(player, { x: at.x, z: at.z, h: at.h });
+  ['title', 'end', 'paused', 'lobby'].forEach(id => { $(id).hidden = true; });
+  $('ferry').hidden = true;
   $('hud').classList.remove('off'); $('touch').hidden = !touchMode;
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-  banner(`Find the ${WORDS[S.total] || S.total} cursed skulls`, 'Follow the green skulls on your compass', 4.5);
+  banner(m.at ? 'You joined the voyage' : `Find the ${WORDS[S.total] || S.total} cursed skulls`, NET ? 'Follow the green skulls on your compass. The triangles are your crew.' : 'Follow the green skulls on your compass', 4.5);
   sizeCompass();
 }
+// the host (or a solo player) sets sail; the crew follows
+function launchVoyage() {
+  const seed = newSeed();
+  if (NET && NET.isHost) NET.broadcast({ t: 'start', seed, pvp, tk: [], g: 0 });
+  startVoyage({ seed, pvp });
+  if (NET && NET.isHost) sendLobby();
+}
+function startSolo() { leaveCrew(); readName(); launchVoyage(); }
+function showTitle(note) {
+  ['end', 'paused', 'lobby'].forEach(id => { $(id).hidden = true; });
+  $('title').hidden = false; $('hud').classList.add('off'); $('touch').hidden = true; $('ferry').hidden = true; setPrompt('');
+  const n = $('netNote'); n.hidden = !note; n.textContent = note || '';
+  showBest();
+}
+function backToTitle(note) {
+  leaveCrew();
+  resetGame(newSeed());
+  showTitle(note);
+}
+
+// ---------- crews ----------
+const NAMES = ['Captain Bones', 'Salty Meg', 'One-Eyed Jo', 'Barnacle Bill', 'Stormy Kate', 'Bilge Rat Ben', 'Mad Molly', 'Old Rattlebones'];
+function readName() {
+  let v = $('nameIn').value.replace(/\s+/g, ' ').trim().slice(0, 14);
+  if (!v) { v = NAMES[Math.floor(Math.random() * NAMES.length)]; $('nameIn').value = v; }
+  try { localStorage.setItem('seaName', v); } catch (e) {}
+  myName = v;
+  return v;
+}
+function leaveCrew() {
+  if (NET) { const n = NET; NET = null; n.close(); }
+  AUTH = true; myId = 'h'; myColor = 0; pvp = false; menuOpen = false; crewCode = '';
+  for (const id of [...remotes.keys()]) removeRemote(id);
+  crewInfo.clear();
+  PM.sail.color.set(0xffffff); PM.skullSail.color.set(0xffffff);
+}
+function inviteLink() {
+  if (!crewCode || !/^https?:$/.test(location.protocol)) return '';
+  const u = new URL(location.href); u.hash = ''; u.searchParams.set('join', crewCode);
+  return u.href;
+}
+function lobbyStatus(text, bad) { const s = $('lobbyStatus'); s.textContent = text || ''; s.classList.toggle('err', !!bad); }
+function renderLobby() {
+  const host = NET && NET.isHost;
+  $('lobbyCode').textContent = crewCode || '·····';
+  const link = inviteLink();
+  $('inviteRow').hidden = !host || !link;
+  $('inviteIn').value = link;
+  $('lobbyLede').textContent = host
+    ? (link ? 'Send your friends the link. They open it, type a name and press Join. Or they can open the game, press Join a crew and type the code.' : 'Friends open the game, press Join a crew and type this code.')
+    : 'Waiting for the captain to set sail.';
+  const list = $('crewList');
+  list.replaceChildren(...[...crewInfo].map(([id, c]) => {
+    const li = document.createElement('li');
+    const dot = document.createElement('i'); dot.className = 'dot'; dot.style.background = CREW_HEX[c.color] || CREW_HEX[0];
+    const nm = document.createElement('span'); nm.textContent = c.name;
+    li.append(dot, nm);
+    const tags = [id === 'h' ? 'captain' : '', id === myId ? 'you' : ''].filter(Boolean).join(', ');
+    if (tags) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = tags; li.append(t); }
+    return li;
+  }));
+  $('pvpIn').checked = pvp; $('pvpIn').disabled = !host;
+  $('launchBtn').hidden = !host;
+  $('pauseCrew').hidden = !NET;
+  $('pauseCode').textContent = crewCode;
+  $('pauseInvite').hidden = !host || !link;
+  $('pauseLink').value = link;
+}
+function sendLobby() {
+  if (!NET || !NET.isHost) return;
+  NET.broadcast({ t: 'lobby', code: crewCode, crew: [...crewInfo].map(([id, c]) => ({ id, name: c.name, c: c.color })), pvp });
+  renderLobby();
+}
+function showLobby() {
+  ['title', 'end', 'paused'].forEach(id => { $(id).hidden = true; });
+  $('lobby').hidden = false;
+  renderLobby();
+}
+async function hostCrew() {
+  if (!window.SeaNet) { showTitle("Multiplayer couldn't load. Reload the page and try again."); return; }
+  readName(); Snd.init();
+  leaveCrew();
+  const net = new SeaNet.Host(myName);
+  NET = net; AUTH = true; myId = 'h'; myColor = 0;
+  crewInfo.set('h', { name: myName, color: 0 });
+  net.on('status', m => { if (!$('lobby').hidden) lobbyStatus(m.text); });
+  net.on('join', m => {
+    crewInfo.set(m.id, { name: m.name, color: m.color });
+    sendLobby();
+    if (S.live) {
+      const ships = crewShips();
+      net.send(m.id, { t: 'start', seed: S.seed, pvp, tk: takenList(), g: S.gold, at: ships.length ? spotNear(ships[0]) : null });
+      if (S.mode !== 'over') toast(`${m.name} joined the crew`);
+    }
+  });
+  net.on('leave', m => {
+    const name = crewName(m.id);
+    crewInfo.delete(m.id); removeRemote(m.id); sendLobby();
+    if (S.live && S.mode !== 'over') toast(`${name} left the crew`);
+  });
+  net.on('me', m => applyShip(Object.assign({}, m, { id: m.from })));
+  net.on('vol', m => { net.broadcast({ t: 'vol', by: m.from, b: m.b }, m.from); spawnVolley(m.from, m.b); });
+  net.on('haul', m => { if (S.live && !S.won) collectSkull(m.i, m.from); });
+  net.on('grab', m => { const L = loot.find(l => l.id === m.id); if (L) grabLoot(L, m.from); });
+  showLobby();
+  lobbyStatus('Contacting the matchmaking server...');
+  try {
+    const code = await net.open();
+    if (NET !== net) return;
+    crewCode = code;
+    sendLobby();
+  } catch (e) {
+    if (NET !== net) return;
+    backToTitle(e.message);
+  }
+}
+async function joinCrew(code) {
+  if (!window.SeaNet) { showTitle("Multiplayer couldn't load. Reload the page and try again."); return; }
+  code = SeaNet.cleanCode(code);
+  if (code.length !== 5) { showTitle('A crew code is 5 letters. Check it with the captain and try again.'); $('joinForm').hidden = false; return; }
+  readName(); Snd.init();
+  leaveCrew();
+  const net = new SeaNet.Guest(myName, code);
+  NET = net; AUTH = false; crewCode = code;
+  net.on('status', m => { if (!$('lobby').hidden) lobbyStatus(m.text); });
+  net.on('lobby', m => {
+    const before = new Map(crewInfo);
+    crewInfo.clear();
+    for (const c of m.crew) crewInfo.set(c.id, { name: c.name, color: c.c });
+    for (const id of [...remotes.keys()]) if (!crewInfo.has(id)) removeRemote(id);
+    pvp = !!m.pvp;
+    if (S.live && S.mode !== 'over' && before.size) {
+      for (const [id, c] of crewInfo) if (!before.has(id) && id !== myId) toast(`${c.name} joined the crew`);
+      for (const [id, c] of before) if (!crewInfo.has(id)) toast(`${c.name} left the crew`);
+    }
+    renderLobby();
+  });
+  net.on('start', m => startVoyage(m));
+  net.on('snap', m => { if (S.live) applySnap(m); });
+  net.on('vol', m => spawnVolley(m.by, m.b));
+  net.on('ev', m => { if (S.live) onEvent(m); });
+  net.on('closed', m => { if (NET === net) backToTitle(m.text); });
+  showLobby();
+  lobbyStatus('Contacting the matchmaking server...');
+  try {
+    const w = await net.connect();
+    if (NET !== net) return;
+    myId = w.id; myColor = w.color;
+    lobbyStatus("You're in the crew. The captain sets sail when everyone's ready.");
+    renderLobby();
+  } catch (e) {
+    if (NET !== net) return;
+    backToTitle(e.message);
+  }
+}
+// what the host sends ten times a second
+function snapMsg() {
+  const s = [];
+  if (S.mode !== 'title') s.push(myState());
+  for (const R of remotes.values()) if (R.raw) s.push(R.raw);
+  return {
+    t: 'snap', s, g: S.gold, tk: takenList(),
+    gh: ghosts.map(G => [G.id, r2(G.x), r2(G.z), r3(G.h), r2(G.speed), r2(Math.max(0, G.fade)), G.sinking ? (G.dismissed ? 2 : 1) : 0]),
+    k: kraken.active ? { tg: kraken.tg, ts: kraken.tentacles.map(Tn => [Tn.n, r3(Tn.angle), r2(Tn.r0), Tn.hp, Tn.alive ? 1 : 0, r2(Tn.rise), r2(Tn.slamP), r2(Tn.curl), r2(Tn.phase)]) } : null,
+    lo: loot.map(L => [L.id, L.x, L.z]),
+  };
+}
+function applySnap(m) {
+  for (const s of m.s) applyShip(s);
+  S.gold = m.g;
+  for (const i of m.tk) takeSkull(i);
+  // ghost ships
+  const seen = new Set();
+  for (const [id, x, z, h, sp, fade, sinking] of m.gh) {
+    seen.add(id);
+    let G = ghosts.find(g => g.id === id);
+    if (!G) G = makeGhost(id, x, z, h);
+    else if (Math.hypot(G.x - x, G.z - z) > 25) { G.x = x; G.z = z; G.h = h; }
+    G.tx = x; G.tz = z; G.th = h; G.speed = sp; G.tfade = fade;
+    if (sinking && !G.sinking) { G.sinking = true; G.dismissed = sinking === 2; }
+  }
+  for (const G of ghosts) if (!seen.has(G.id)) G.gone = true;
+  // the Kraken
+  const k = m.k;
+  if (!k) kraken.tentacles.forEach(t => { t.alive = false; });
+  else {
+    if (!kraken.active || kraken.tg !== k.tg) { clearKraken(); kraken.active = true; kraken.tg = k.tg; }
+    const tseen = new Set();
+    for (const [n, a, r0, hp, al, rise, slamP, curl, phase] of k.ts) {
+      tseen.add(n);
+      if (kraken.removed.has(n)) continue;
+      let Tn = kraken.tentacles.find(t => t.n === n);
+      if (!Tn) { Tn = makeTentacle(n, a, r0, curl, phase, rise, 99); kraken.tentacles.push(Tn); }
+      Tn.hp = hp; Tn.alive = !!al; Tn.slamP = slamP;
+      if (Math.abs(Tn.rise - rise) > 0.25) Tn.rise = rise;
+    }
+    for (const t of kraken.tentacles) if (!tseen.has(t.n)) t.alive = false;
+  }
+  // barrels
+  const lseen = new Set();
+  for (const [id, x, z] of m.lo) { lseen.add(id); if (!lootGrabbed.has(id) && !loot.some(L => L.id === id)) makeLoot(id, x, z); }
+  for (const L of [...loot]) if (!lseen.has(L.id)) removeLoot(L);
+}
+let netAcc = 0;
+function netTick(dt) {
+  if (!NET || !S.live) return;
+  netAcc += dt;
+  if (NET.isHost) { if (netAcc >= 0.1) { netAcc = 0; NET.broadcast(snapMsg()); } }
+  else if (netAcc >= 0.083) { netAcc = 0; if (S.mode !== 'over') NET.send(Object.assign({ t: 'me' }, myState())); }
+}
+
+// ---------- menus and input ----------
 let prevMode = 'play';
 function setPaused(p) {
-  if (p && S.mode !== 'paused' && (S.mode === 'play' || S.mode === 'won')) { prevMode = S.mode; S.mode = 'paused'; $('paused').hidden = false; for (const k in keys) keys[k] = false; $('resumeBtn').focus(); if (Snd.ac) Snd.ac.suspend(); }
+  if (NET) {
+    // a crew's sea doesn't stop: this just opens the menu over the game
+    if (p && !menuOpen && S.live && S.mode !== 'over') { menuOpen = true; for (const k in keys) keys[k] = false; $('pauseTitle').textContent = 'Menu'; $('pauseLede').textContent = 'Your crew is still sailing. So are the ghosts.'; $('pauseLeave').hidden = false; renderLobby(); $('paused').hidden = false; $('resumeBtn').focus(); }
+    else if (!p && menuOpen) { menuOpen = false; $('paused').hidden = true; }
+    return;
+  }
+  if (p && S.mode !== 'paused' && sailing()) { prevMode = S.mode; S.mode = 'paused'; $('pauseTitle').textContent = 'Paused'; $('pauseLede').textContent = 'The fog waits for you.'; $('pauseLeave').hidden = true; $('pauseCrew').hidden = true; $('paused').hidden = false; for (const k in keys) keys[k] = false; $('resumeBtn').focus(); if (Snd.ac) Snd.ac.suspend(); }
   else if (!p && S.mode === 'paused') { S.mode = prevMode; $('paused').hidden = true; if (Snd.ac) Snd.ac.resume(); last = performance.now(); }
 }
+const isPaused = () => NET ? menuOpen : S.mode === 'paused';
 function toggleMute() { Snd.mute(!Snd.on); $('muteBtn').textContent = Snd.on ? 'Mute' : 'Unmute'; }
+function copyLink(input, btn) {
+  const done = () => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy link'; }, 1800); };
+  const fallback = () => { input.focus(); input.select(); btn.textContent = 'Press Ctrl+C'; };
+  try { navigator.clipboard.writeText(input.value).then(done, fallback); } catch (e) { fallback(); }
+}
 
-$('startBtn').addEventListener('click', startGame);
-$('againBtn').addEventListener('click', startGame);
+$('startBtn').addEventListener('click', startSolo);
+$('hostBtn').addEventListener('click', hostCrew);
+$('joinOpenBtn').addEventListener('click', () => { const f = $('joinForm'); f.hidden = !f.hidden; if (!f.hidden) $('codeIn').focus(); });
+$('joinForm').addEventListener('submit', e => { e.preventDefault(); joinCrew($('codeIn').value); });
+$('codeIn').addEventListener('input', () => { const v = $('codeIn').value, c = window.SeaNet ? SeaNet.cleanCode(v) : v; if (c !== v) $('codeIn').value = c; });
+$('launchBtn').addEventListener('click', () => { if (NET && NET.isHost) launchVoyage(); });
+$('leaveBtn').addEventListener('click', () => backToTitle(''));
+$('pvpIn').addEventListener('change', () => { if (NET && NET.isHost) { pvp = $('pvpIn').checked; sendLobby(); } });
+$('copyBtn').addEventListener('click', () => copyLink($('inviteIn'), $('copyBtn')));
+$('pauseCopy').addEventListener('click', () => copyLink($('pauseLink'), $('pauseCopy')));
+$('againBtn').addEventListener('click', () => { if (NET && NET.isHost) launchVoyage(); else if (!NET) startSolo(); });
+$('endLeave').addEventListener('click', () => backToTitle(''));
+$('pauseLeave').addEventListener('click', () => backToTitle(''));
 $('resumeBtn').addEventListener('click', () => setPaused(false));
-$('pauseBtn').addEventListener('click', () => setPaused(S.mode !== 'paused'));
+$('pauseBtn').addEventListener('click', () => setPaused(!isPaused()));
 $('muteBtn').addEventListener('click', toggleMute);
 $('fsBtn').addEventListener('click', () => {
   const el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -1364,20 +2249,21 @@ $('fsBtn').addEventListener('click', () => {
 const KEYMAP = { arrowup: 'w', arrowdown: 's', arrowleft: 'a', arrowright: 'd', ' ': 'space', spacebar: 'space' };
 addEventListener('keydown', e => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
   let k = (e.key || '').toLowerCase(); k = KEYMAP[k] || k;
-  const inGame = S.mode === 'play' || S.mode === 'won' || S.mode === 'sinking';
-  if (inGame && (k === 'space' || 'wasdqerf'.includes(k) && k.length === 1 || (e.key || '').startsWith('Arrow'))) e.preventDefault();
-  if (k === 'enter' && !$('title').hidden && document.activeElement === document.body) { startGame(); return; }
-  if (!inGame && S.mode !== 'paused') return;
-  if (k === 'p' || k === 'escape') { setPaused(S.mode !== 'paused'); return; }
+  const inGame = S.live && ['play', 'won', 'sinking', 'ferry', 'paused'].includes(S.mode);
+  if (inGame && (k === 'space' || ('wasdqerf'.includes(k) && k.length === 1) || (e.key || '').startsWith('Arrow'))) e.preventDefault();
+  if (!inGame) return;
+  if (k === 'p' || k === 'escape') { setPaused(!isPaused()); return; }
   if (k === 'm') { toggleMute(); return; }
-  if (e.repeat) return;
+  if (e.repeat || isPaused()) return;
   keys[k] = true;
   if (k === 'space') fireAuto();
 });
 addEventListener('keyup', e => { let k = (e.key || '').toLowerCase(); k = KEYMAP[k] || k; keys[k] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
-document.addEventListener('visibilitychange', () => { if (document.hidden && S.mode === 'play') setPaused(true); });
+// solo pauses when you switch tabs; a crew keeps sailing
+document.addEventListener('visibilitychange', () => { if (document.hidden && !NET && S.mode === 'play') setPaused(true); });
 
 const canvas = $('c');
 canvas.addEventListener('pointerdown', e => { cam.drag = true; cam.lx = e.clientX; cam.ly = e.clientY; try { canvas.setPointerCapture(e.pointerId); } catch (err) {} });
@@ -1390,7 +2276,7 @@ const endDrag = () => { cam.drag = false; };
 canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
 canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist = clamp(cam.dist * (e.deltaY > 0 ? 1.08 : 0.93), 10, 34); }, { passive: false });
 
-function enableTouch() { if (touchMode) return; touchMode = true; document.body.classList.add('touch'); if (S.mode === 'play' || S.mode === 'won') $('touch').hidden = false; }
+function enableTouch() { if (touchMode) return; touchMode = true; document.body.classList.add('touch'); if (sailing()) $('touch').hidden = false; }
 if (matchMedia('(pointer: coarse)').matches) enableTouch();
 addEventListener('touchstart', enableTouch, { passive: true, once: true });
 document.querySelectorAll('#touch button').forEach(b => {
@@ -1405,6 +2291,15 @@ function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.asp
 addEventListener('resize', resize);
 
 // ---------- main loop ----------
+function simulate(dt) {
+  T += dt;
+  if (S.live && ['play', 'won', 'sinking', 'ferry'].includes(S.mode)) stepGame(dt);
+  stepWorldRules(dt);
+  if (S.mode !== 'title') stepEntities(dt);
+  stepRemotes(dt);
+  stepWorld(dt);
+  netTick(dt);
+}
 let last = performance.now(), perfAcc = 0, perfN = 0;
 function frame(now) {
   requestAnimationFrame(frame);
@@ -1412,24 +2307,36 @@ function frame(now) {
   const dt = Math.min(0.05, Math.max(0, raw));
   if (raw < 0.25) { perfAcc += raw; perfN++; }
   if (perfN >= 90) { if (perfAcc / perfN > 0.028 && DPR > 0.6) { DPR = Math.max(0.6, DPR - 0.2); renderer.setPixelRatio(DPR); renderer.setSize(innerWidth, innerHeight, false); } perfAcc = 0; perfN = 0; }
-  if (S.mode !== 'paused') {
-    T += dt;
-    if (S.mode === 'play' || S.mode === 'won' || S.mode === 'sinking') stepGame(dt);
-    if (S.mode !== 'title') stepEntities(dt);
-    stepWorld(dt);
-  }
+  if (S.mode !== 'paused') simulate(dt);
   updateCamera(dt);
   hud();
   renderer.render(scene, camera);
 }
+// Browsers stop drawing hidden tabs. In a crew the sea has to keep moving
+// (the host runs it for everyone), so a worker keeps it ticking.
+const hiddenTick = () => {
+  if (!document.hidden || !NET) return;
+  const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000);
+  last = now;
+  simulate(dt);
+};
+if (window.SeaNet) SeaNet.workerTicker(hiddenTick, 50); else setInterval(hiddenTick, 50);
 
-function boot() {
-  placeIslands(); S.total = islands.filter(I => I.skull).length;
-  sizeCompass();
-  requestAnimationFrame(frame);
+// ---------- start ----------
+try { $('nameIn').value = localStorage.getItem('seaName') || ''; } catch (e) {}
+const joinParam = new URLSearchParams(location.search).get('join');
+if (joinParam && window.SeaNet) {
+  $('codeIn').value = SeaNet.cleanCode(joinParam);
+  $('joinForm').hidden = false;
+  $('netNote').hidden = false;
+  $('netNote').textContent = `You've been invited to crew ${SeaNet.cleanCode(joinParam)}. Type your pirate name, then press Join.`;
 }
-boot();
+if (!window.SeaNet || !window.Peer) { $('hostBtn').disabled = true; $('joinOpenBtn').disabled = true; }
+placeIslands(newSeed()); S.total = islands.filter(I => I.skull).length;
+sizeCompass();
+requestAnimationFrame(frame);
 })();
+
 </script>
 </body>
 </html>
