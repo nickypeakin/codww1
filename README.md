@@ -1,6 +1,6 @@
-# The Cursed Tide
+# Sea of Thieves Fan Game
 
-A spooky 3D pirate game that runs in any modern browser. You sail a haunted sea at night, sink ghost ships, fight off the Kraken and haul five cursed skulls aboard before the dead drag you under.
+A fan-made, spooky 3D pirate game that runs in any modern browser. You sail a haunted sea at night, sink ghost ships, fight off the Kraken and haul five cursed skulls aboard before the dead drag you under.
 
 Nothing needs to be installed. Three.js is bundled and all sounds are generated in code, so it works on a school Chromebook or laptop and on networks that block other sites. The fonts come from Google Fonts; if they're blocked the game falls back to fonts already on your computer.
 
